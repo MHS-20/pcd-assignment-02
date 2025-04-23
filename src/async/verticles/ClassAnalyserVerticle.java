@@ -8,7 +8,6 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,24 +22,33 @@ public class ClassAnalyserVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        vertx.executeBlocking(promise -> {
-            try {
-                String content = Files.readString(classFile.toPath());
-                CompilationUnit cu = StaticJavaParser.parse(content);
-                Set<String> usedTypes = new HashSet<>();
-                cu.accept(new VoidVisitorAdapter<Void>() {
-                    @Override
-                    public void visit(ClassOrInterfaceType type, Void arg) {
-                        usedTypes.add(type.getNameAsString());
-                        super.visit(type, arg);
-                    }
-                }, null);
+        this.getVertx().fileSystem().readFile(classFile.toPath().toString(), res -> {
+            if (res.succeeded()) {
+                try {
+                    String content = res.result().toString();
 
-                String className = classFile.getName().replace(".java", "");
-                promise.complete(new ClassDepsReport(className, usedTypes));
-            } catch (Exception e) {
-                promise.fail(e);
+                    // parse file
+                    CompilationUnit cu = StaticJavaParser.parse(content);
+                    Set<String> usedTypes = new HashSet<>();
+
+                    // visit ast
+                    cu.accept(new VoidVisitorAdapter<Void>() {
+                        @Override
+                        public void visit(ClassOrInterfaceType type, Void arg) {
+                            usedTypes.add(type.getNameAsString());
+                            super.visit(type, arg);
+                        }
+                    }, null);
+
+                    String className = classFile.getName().replace(".java", "");
+                    resultPromise.complete(new ClassDepsReport(className, usedTypes));
+
+                } catch (Exception e) {
+                    resultPromise.fail(e);
+                }
+            } else {
+                resultPromise.fail(res.cause());
             }
-        }, resultPromise);
+        });
     }
 }

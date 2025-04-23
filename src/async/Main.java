@@ -16,18 +16,24 @@ public class Main {
         DependencyAnalyserLib.getClassDependencies(vertx, classFile).onComplete(cls -> {
             if (cls.succeeded()) {
                 System.out.println("\n--- Class Report ---\n" + cls.result());
+            } else {
+                System.out.println("\n--- Class Report Error ---\n" + cls.cause());
             }
         });
 
         DependencyAnalyserLib.getPackageDependencies(vertx, packageDir).onComplete(pkg -> {
             if (pkg.succeeded()) {
                 System.out.println("\n--- Package Report ---\n" + pkg.result());
+            } else {
+                System.out.println("\n--- Package Report Error ---\n" + pkg.cause());
             }
         });
 
         DependencyAnalyserLib.getProjectDependencies(vertx, projectDir).onComplete(project -> {
             if (project.succeeded()) {
                 System.out.println("\n--- Project Report ---\n" + project.result());
+            } else {
+                System.out.println("\n--- Project Report Error ---\n" + project.cause());
             }
             vertx.close();
         });
