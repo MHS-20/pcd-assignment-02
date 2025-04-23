@@ -31,5 +31,8 @@ public class Main {
             }
             vertx.close();
         });
+
+        System.out.println("Waiting");
+
     }
 }

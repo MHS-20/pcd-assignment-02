@@ -1,5 +1,6 @@
-package async;
+package async.verticles;
 
+import async.reports.ClassDepsReport;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import io.vertx.core.*;
 import com.github.javaparser.StaticJavaParser;
@@ -8,7 +9,6 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.io.FileNotFoundException;
 import java.util.HashSet;
 import java.util.Set;
 

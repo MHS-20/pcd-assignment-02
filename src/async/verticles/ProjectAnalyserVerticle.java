@@ -1,5 +1,7 @@
-package async;
+package async.verticles;
 
+import async.reports.PackageDepsReport;
+import async.reports.ProjectDepsReport;
 import io.vertx.core.*;
 
 import java.io.File;

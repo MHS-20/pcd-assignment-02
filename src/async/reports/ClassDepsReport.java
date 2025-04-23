@@ -1,4 +1,4 @@
-package async;
+package async.reports;
 
 import java.util.Set;
 
@@ -20,6 +20,6 @@ public class ClassDepsReport {
     }
 
     public String toString() {
-        return "Class: " + className + "\nUsed Types: " + usedTypes;
+        return "Class: " + className + "\n\tUsed Types: " + usedTypes;
     }
 }

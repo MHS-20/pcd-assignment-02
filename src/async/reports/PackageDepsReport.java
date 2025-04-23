@@ -1,4 +1,4 @@
-package async;
+package async.reports;
 
 import java.util.Map;
 import java.util.Set;
@@ -17,6 +17,15 @@ public class PackageDepsReport {
     }
 
     public String toString() {
-        return "Package: " + packageName + "\nClass Deps: " + classDependencies;
+        StringBuilder sb = new StringBuilder();
+
+        for (Map.Entry<String, Set<String>> entry : classDependencies.entrySet()) {
+            sb.append("\t" + entry.getKey())
+                    .append(" -> ")
+                    .append(entry.getValue())
+                    .append("\n");
+        }
+
+        return "Package: " + packageName + "\nClass Deps: \n" + sb;
     }
 }
