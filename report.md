@@ -27,13 +27,7 @@ It depends, maybe the GUI can just render after each new dependency only on the 
 
 Otherwise, you need a class that it's emitted which contains the filename and the package name. 
 Based on that info, you can draw accordingly. Therefore, is just a single big stream?
-It makes sense since you have to parse a full project. 
-
-### GUI TODO: 
-a component to select the source root folder,
-a button to start the process, 
-a couple of output boxed reporting the number of classes/interfaces analysed and the number of dependencies found.
-
+It makes sense since you have to parse a full project.
 
 
 
