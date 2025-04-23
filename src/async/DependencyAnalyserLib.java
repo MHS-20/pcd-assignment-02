@@ -5,18 +5,21 @@ import io.vertx.core.*;
 import java.io.File;
 
 public class DependencyAnalyserLib {
-
-    public static void deployAnalysis(Vertx vertx, File projectSrcFolder) {
-        vertx.deployVerticle(new ProjectAnalyserVerticle(projectSrcFolder));
+    public static Future<ProjectDepsReport> getProjectDependencies(Vertx vertx, File projectSrcFolder) {
+        Promise<ProjectDepsReport> promise = Promise.promise();
+        vertx.deployVerticle(new ProjectAnalyserVerticle(projectSrcFolder, promise));
+        return promise.future();
     }
 
-    public static void deployPackageAnalysis(Vertx vertx, File packageSrcFolder) {
-        Promise<Void> dummy = Promise.promise();
-        vertx.deployVerticle(new PackageAnalyserVerticle(packageSrcFolder, dummy));
+    public static Future<PackageDepsReport> getPackageDependencies(Vertx vertx, File packageSrcFolder) {
+        Promise<PackageDepsReport> promise = Promise.promise();
+        vertx.deployVerticle(new PackageAnalyserVerticle(packageSrcFolder, promise));
+        return promise.future();
     }
 
-    public static void deployClassAnalysis(Vertx vertx, File classSrcFile) {
-        Promise<Void> dummy = Promise.promise();
-        vertx.deployVerticle(new ClassAnalyserVerticle(classSrcFile, dummy));
+    public static Future<ClassDepsReport> getClassDependencies(Vertx vertx, File classSrcFile) {
+        Promise<ClassDepsReport> promise = Promise.promise();
+        vertx.deployVerticle(new ClassAnalyserVerticle(classSrcFile, promise));
+        return promise.future();
     }
 }

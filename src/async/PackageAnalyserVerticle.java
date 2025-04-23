@@ -7,36 +7,37 @@ import java.util.*;
 
 public class PackageAnalyserVerticle extends AbstractVerticle {
     private final File packageFolder;
-    private final Promise<Void> doneSignal;
+    private final Promise<PackageDepsReport> resultPromise;
 
-    public PackageAnalyserVerticle(File packageFolder, Promise<Void> doneSignal) {
+    public PackageAnalyserVerticle(File packageFolder, Promise<PackageDepsReport> resultPromise) {
         this.packageFolder = packageFolder;
-        this.doneSignal = doneSignal;
+        this.resultPromise = resultPromise;
     }
 
     @Override
     public void start() {
         File[] javaFiles = packageFolder.listFiles((dir, name) -> name.endsWith(".java"));
-        if (javaFiles == null) {
-            doneSignal.complete();
+        if (javaFiles == null || javaFiles.length == 0) {
+            resultPromise.complete(new PackageDepsReport(packageFolder.getName(), Collections.emptyMap()));
             return;
         }
 
-        List<Future> classFutures = new ArrayList<>();
+        Map<String, Set<String>> deps = new HashMap<>();
+        List<Future> futures = new ArrayList<>();
 
-        for (File file : javaFiles) {
-            Promise<Void> classPromise = Promise.promise();
-            classFutures.add(classPromise.future());
-            vertx.deployVerticle(new ClassAnalyserVerticle(file, classPromise));
+        for (File javaFile : javaFiles) {
+            Promise<ClassDepsReport> classPromise = Promise.promise();
+            vertx.deployVerticle(new ClassAnalyserVerticle(javaFile, classPromise));
+            futures.add(classPromise.future().onSuccess(report -> {
+                deps.put(report.getClassName(), report.getUsedTypes());
+            }));
         }
 
-        CompositeFuture.all(classFutures).onComplete(ar -> {
+        CompositeFuture.all(futures).onComplete(ar -> {
             if (ar.succeeded()) {
-                System.out.println("Package analysed: " + packageFolder.getName());
-                doneSignal.complete();
+                resultPromise.complete(new PackageDepsReport(packageFolder.getName(), deps));
             } else {
-                ar.cause().printStackTrace();
-                doneSignal.fail(ar.cause());
+                resultPromise.fail(ar.cause());
             }
         });
     }

@@ -3,18 +3,23 @@ package async;
 import java.util.Set;
 
 public class ClassDepsReport {
+    private final String className;
     private final Set<String> usedTypes;
 
-    public ClassDepsReport(Set<String> usedTypes) {
+    public ClassDepsReport(String className, Set<String> usedTypes) {
+        this.className = className;
         this.usedTypes = usedTypes;
+    }
+
+    public String getClassName() {
+        return className;
     }
 
     public Set<String> getUsedTypes() {
         return usedTypes;
     }
 
-    @Override
     public String toString() {
-        return "" + usedTypes;
+        return "Class: " + className + "\nUsed Types: " + usedTypes;
     }
 }

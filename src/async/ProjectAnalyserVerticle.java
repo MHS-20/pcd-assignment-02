@@ -6,32 +6,39 @@ import java.io.File;
 import java.util.*;
 
 public class ProjectAnalyserVerticle extends AbstractVerticle {
-    private final File projectSrcFolder;
+    private final File projectFolder;
+    private final Promise<ProjectDepsReport> resultPromise;
 
-    public ProjectAnalyserVerticle(File projectSrcFolder) {
-        this.projectSrcFolder = projectSrcFolder;
+    public ProjectAnalyserVerticle(File projectFolder, Promise<ProjectDepsReport> resultPromise) {
+        this.projectFolder = projectFolder;
+        this.resultPromise = resultPromise;
     }
 
     @Override
     public void start() {
-        File[] packageDirs = projectSrcFolder.listFiles(File::isDirectory);
-        if (packageDirs == null) return;
-
-        List<Future> packageFutures = new ArrayList<>();
-
-        for (File pkg : packageDirs) {
-            Promise<Void> promise = Promise.promise();
-            packageFutures.add(promise.future());
-            vertx.deployVerticle(new PackageAnalyserVerticle(pkg, promise));
+        File[] packageDirs = projectFolder.listFiles(File::isDirectory);
+        if (packageDirs == null || packageDirs.length == 0) {
+            resultPromise.complete(new ProjectDepsReport(Collections.emptyMap()));
+            return;
         }
 
-        CompositeFuture.all(packageFutures).onComplete(ar -> {
+        Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
+        List<Future> futures = new ArrayList<>();
+
+        for (File pkg : packageDirs) {
+            Promise<PackageDepsReport> pkgPromise = Promise.promise();
+            vertx.deployVerticle(new PackageAnalyserVerticle(pkg, pkgPromise));
+            futures.add(pkgPromise.future().onSuccess(report -> {
+                allDeps.put(pkg.getName(), report.getClassDependencies());
+            }));
+        }
+
+        CompositeFuture.all(futures).onComplete(ar -> {
             if (ar.succeeded()) {
-                System.out.println("Project analysis complete.");
+                resultPromise.complete(new ProjectDepsReport(allDeps));
             } else {
-                ar.cause().printStackTrace();
+                resultPromise.fail(ar.cause());
             }
-            vertx.close();
         });
     }
 }
