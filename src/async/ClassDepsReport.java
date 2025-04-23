@@ -15,6 +15,6 @@ public class ClassDepsReport {
 
     @Override
     public String toString() {
-        return "Used types: " + usedTypes;
+        return "" + usedTypes;
     }
 }
