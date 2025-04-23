@@ -1,42 +1,29 @@
 package async;
 
+import io.vertx.core.Vertx;
+
 import java.io.File;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
-        File srcFile = new File("src/async/DependencyAnalyserLib.java");
-        System.out.println("Dependencies of source " + srcFile.getName() + ": ");
-        ClassDepsReport report = DependencyAnalyserLib.getClassDependencies(srcFile);
-        System.out.println(report+ "\n");
 
-        File srcFile2 = new File("src/async/ClassDepsReport.java");
-        System.out.println("Dependencies of source " + srcFile2.getName() + ": ");
-        ClassDepsReport report2 = DependencyAnalyserLib.getClassDependencies(srcFile2);
-        System.out.println(report2+ "\n");
+    public static void main(String[] args) {
+        Vertx vertx = Vertx.vertx();
 
-        File srcFile3 = new File("src/async/PackageDepsReport.java");
-        System.out.println("Dependencies of source " + srcFile3.getName() + ": ");
-        ClassDepsReport report3 = DependencyAnalyserLib.getClassDependencies(srcFile3);
-        System.out.println(report3+ "\n");
+        File projectDir = new File("src/");
+        File packageDir = new File("src/example/");
+        File classFile = new File("src/example/ExampleClass.java");
 
-        File srcFile4 = new File("src/async/ProjectDepsReport.java");
-        System.out.println("Dependencies of source " + srcFile4.getName() + ": ");
-        ClassDepsReport report4 = DependencyAnalyserLib.getClassDependencies(srcFile4);
-        System.out.println(report4+ "\n");
+        System.out.println("\n--- Class Analysis ---");
+        DependencyAnalyserLib.deployClassAnalysis(vertx, classFile);
 
-        File srcFile5 = new File("src/example/ExampleClass.java");
-        System.out.println("Dependencies of source " + srcFile5.getName() + ": ");
-        ClassDepsReport report5 = DependencyAnalyserLib.getClassDependencies(srcFile5);
-        System.out.println(report5+ "\n");
+        vertx.setTimer(3000, id -> {
+            System.out.println("\n--- Package Analysis ---");
+            DependencyAnalyserLib.deployPackageAnalysis(vertx, packageDir);
+        });
 
-        File packageFolder = new File("src/async/");
-        System.out.println("Dependencies of package " + packageFolder.getName() + ": ");
-        PackageDepsReport pkgReport = DependencyAnalyserLib.getPackageDependencies(packageFolder);
-        System.out.println(pkgReport.getAllUsedTypes() + "\n");
-
-        File projectFolder = new File("src/");
-        System.out.println("Dependencies of project " + projectFolder.getName() + ": ");
-        ProjectDepsReport projReport = DependencyAnalyserLib.getProjectDependencies(projectFolder);
-        System.out.println(projReport.getAllUsedTypes() + "\n");
+        vertx.setTimer(6000, id -> {
+            System.out.println("\n--- Project Analysis ---");
+            DependencyAnalyserLib.deployAnalysis(vertx, projectDir);
+        });
     }
 }
