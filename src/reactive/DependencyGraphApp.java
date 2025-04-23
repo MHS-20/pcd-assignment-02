@@ -12,7 +12,6 @@ import java.util.Set;
 public class DependencyGraphApp extends JFrame {
 
     private static final Path DEFAULT_PATH = Path.of("src/");
-
     private final JButton selectFolderButton = new JButton("Select Source Root");
     private final JButton startButton = new JButton("Start Analysis");
     private final JLabel selectedFolderLabel = new JLabel("Selected folder: " + DEFAULT_PATH);
@@ -27,10 +26,11 @@ public class DependencyGraphApp extends JFrame {
     public DependencyGraphApp() {
         setTitle("Dependency Analyzer");
         //setSize(1200, 800);
-        setSize(screenSize.width, screenSize.height);
+        setSize(screenSize.width - 100, screenSize.height - 100);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        graphPanel.setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
+        graphPanel.setPreferredSize(new Dimension(Toolkit.getDefaultToolkit().getScreenSize().width - 200,
+                Toolkit.getDefaultToolkit().getScreenSize().height - 200));
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(selectFolderButton);

@@ -6,11 +6,12 @@ import java.util.*;
 
 public class DependencyGraphPanel extends JPanel {
 
+    private final Map<String, Point> packageCenters = new HashMap<>();
     private final Map<String, Point> nodePositions = new HashMap<>();
     private final Map<String, Set<String>> edges = new HashMap<>();
     private final Random rand = new Random();
 
-    int padding = 150;
+    int padding = 200;
     Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
 
@@ -20,21 +21,44 @@ public class DependencyGraphPanel extends JPanel {
         repaint();
     }
 
-    public void addFileWithDependencies(String file, Set<String> deps) {
-        ensureNode(file);
+    public void addFileWithDependencies(String fileName, Set<String> deps) {
+        String pkg = extractPackage(fileName);
+        ensureNode(fileName, pkg);
         for (String dep : deps) {
-            ensureNode(dep);
-            edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep);
+            String depPkg = extractPackage(dep);
+            ensureNode(dep, depPkg);
+            edges.computeIfAbsent(fileName, k -> new HashSet<>()).add(dep);
         }
         repaint();
     }
 
-    private void ensureNode(String name) {
+    private String extractPackage(String fileName) {
+        return fileName.contains(".")
+                ? fileName.substring(0, fileName.lastIndexOf('.'))
+                : "default";
+    }
+
+
+    private void ensureNode(String name, String packageName) {
         if (!nodePositions.containsKey(name)) {
-            nodePositions.put(name, new Point(padding + rand.nextInt(screenSize.width - padding * 2),
-                    padding + rand.nextInt(screenSize.height - padding * 2)));
+            Point center = getOrCreatePackageCenter(packageName);
+            int jitter = 50;
+            int x = center.x + rand.nextInt(jitter * 2) - jitter;
+            int y = center.y + rand.nextInt(jitter * 2) - jitter;
+            nodePositions.put(name, new Point(x, y));
         }
     }
+
+
+    private Point getOrCreatePackageCenter(String packageName) {
+        return packageCenters.computeIfAbsent(packageName, pkg -> {
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            int x = padding + rand.nextInt(screenSize.width - padding * 2);
+            int y = padding + rand.nextInt(screenSize.height - padding * 2);
+            return new Point(x, y);
+        });
+    }
+
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -56,7 +80,7 @@ public class DependencyGraphPanel extends JPanel {
         for (var entry : nodePositions.entrySet()) {
             Point p = entry.getValue();
             g2d.setColor(Color.BLUE);
-            g2d.fillOval(p.x - 20, p.y - 20, 40, 40);
+            g2d.fillOval(p.x - 20, p.y - 20, 20, 20);
             g2d.setColor(Color.BLACK);
             g2d.drawString(entry.getKey(), p.x - 20, p.y - 25);
         }

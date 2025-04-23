@@ -15,19 +15,16 @@ When all packages' futures have completed, the project future completes.
 ## 2. Reactive (Rx)
 A full subscription requires: onNext(), onError(), onCompleted()
 
-Collect dependencies in progressively larger objects, or just have a unique stream?
-You actually need to distinguish between different classes and packages dependencies.
+Collect dependencies in progressively larger objects. 
+A class which contains the filename and the package name is emitted.
+Based on that info, the gui draws the node accordingly.
 
-A stream of dependencies for each file.
-A stream of dependencies for each package.
-When all streams have completed, the program completes.
+It's needed to distinguish between different classes and packages dependencies.
+The GUI is re-rendered after each source file, since are the smallest unit processable.
+I may consider to render each dependency, creating a smaller object than the file depencencies class.
 
-You also need to re-render the gui after each new dependency.
-It depends, maybe the GUI can just render after each new dependency only on the last layer. 
-
-Otherwise, you need a class that it's emitted which contains the filename and the package name. 
-Based on that info, you can draw accordingly. Therefore, is just a single big stream?
-It makes sense since you have to parse a full project.
-
+### TODO: 
+- Aggiungere una classe più piccola per fare il render delle singole dipendenze
+- provare ad aggiungere del clustering (non sembra funzionare bene, magari anche colori diversi)
 
 
