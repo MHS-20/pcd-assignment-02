@@ -14,19 +14,26 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
 public class DependencyAnalyserRx {
 
+    public static AtomicInteger fileCount = new AtomicInteger(0);
+    public static AtomicInteger packageCount = new AtomicInteger(0);
+    public static AtomicInteger dependencyCount = new AtomicInteger(0);
+
     public static Observable<FileDependencies> analyzeFile(Path filePath) {
+        fileCount.incrementAndGet();
         return Observable.fromCallable(() ->
                 new FileDependencies(filePath, extractDependencies(filePath)));
         //.subscribeOn(Schedulers.io()); // Different thread for each file
     }
 
     public static Observable<PackageDependencies> analyzePackage(Path packagePath) {
+        packageCount.incrementAndGet();
         try (Stream<Path> files = Files.walk(packagePath)) {
             List<Path> javaFiles = files
                     .filter(p -> p.toString().endsWith(".java"))
@@ -69,6 +76,10 @@ public class DependencyAnalyserRx {
                         throwable -> System.err.println("Error: " + throwable),
                         () -> System.out.println("Project Analysis Completed")
                 );
+
+        System.out.println("Analized packaged: " + packageCount.get());
+        System.out.println("Analized files: " + fileCount.get());
+        System.out.println("Dependecies found: " + dependencyCount.get());
     }
 
 
@@ -79,6 +90,7 @@ public class DependencyAnalyserRx {
             cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
                 String name = type.getNameAsString();
                 dependencies.add(name);
+                dependencyCount.incrementAndGet();
                 // System.out.println("Dependencies: " + dependencies);
             });
             cu.getImports().forEach(importDecl -> {
@@ -89,5 +101,11 @@ public class DependencyAnalyserRx {
             System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
         }
         return dependencies;
+    }
+
+    public static void resetCounters() {
+        fileCount.set(0);
+        packageCount.set(0);
+        dependencyCount.set(0);
     }
 }
