@@ -13,7 +13,7 @@ public class Main {
         File packageDir = new File("src/sync/");
         File classFile = new File("src/example/ExampleClass.java");
 
-        DependencyAnalyserLib.getClassDependencies(vertx, classFile).onComplete(cls -> {
+        AsyncDependencyAnalyser.getClassDependencies(vertx, classFile).onComplete(cls -> {
             if (cls.succeeded()) {
                 System.out.println("\n--- Class Report ---\n" + cls.result());
             } else {
@@ -21,7 +21,7 @@ public class Main {
             }
         });
 
-        DependencyAnalyserLib.getPackageDependencies(vertx, packageDir).onComplete(pkg -> {
+        AsyncDependencyAnalyser.getPackageDependencies(vertx, packageDir).onComplete(pkg -> {
             if (pkg.succeeded()) {
                 System.out.println("\n--- Package Report ---\n" + pkg.result());
             } else {
@@ -29,7 +29,7 @@ public class Main {
             }
         });
 
-        DependencyAnalyserLib.getProjectDependencies(vertx, projectDir).onComplete(project -> {
+        AsyncDependencyAnalyser.getProjectDependencies(vertx, projectDir).onComplete(project -> {
             if (project.succeeded()) {
                 System.out.println("\n--- Project Report ---\n" + project.result());
             } else {

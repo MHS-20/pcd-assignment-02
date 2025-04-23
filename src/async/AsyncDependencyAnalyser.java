@@ -10,7 +10,7 @@ import io.vertx.core.*;
 
 import java.io.File;
 
-public class DependencyAnalyserLib {
+public class AsyncDependencyAnalyser {
     public static Future<ProjectDepsReport> getProjectDependencies(Vertx vertx, File projectSrcFolder) {
         Promise<ProjectDepsReport> promise = Promise.promise();
         vertx.deployVerticle(new ProjectAnalyserVerticle(projectSrcFolder, promise));

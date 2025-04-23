@@ -3,6 +3,7 @@ package async.verticles;
 import async.reports.ClassDepsReport;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import io.vertx.core.*;
+import io.vertx.core.buffer.Buffer;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -22,33 +23,35 @@ public class ClassAnalyserVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        this.getVertx().fileSystem().readFile(classFile.toPath().toString(), res -> {
-            if (res.succeeded()) {
-                try {
-                    String content = res.result().toString();
+        readFile(classFile)
+                .compose(this::parseToAST)
+                .compose(this::extractTypes)
+                .onSuccess(resultPromise::complete)
+                .onFailure(resultPromise::fail);
+    }
 
-                    // parse file
-                    CompilationUnit cu = StaticJavaParser.parse(content);
-                    Set<String> usedTypes = new HashSet<>();
+    private Future<String> readFile(File file) {
+        return vertx.fileSystem().readFile(file.toPath().toString())
+                .map(Buffer::toString);
+    }
 
-                    // visit ast
-                    cu.accept(new VoidVisitorAdapter<Void>() {
-                        @Override
-                        public void visit(ClassOrInterfaceType type, Void arg) {
-                            usedTypes.add(type.getNameAsString());
-                            super.visit(type, arg);
-                        }
-                    }, null);
+    private Future<CompilationUnit> parseToAST(String content) {
+        return Future.succeededFuture(StaticJavaParser.parse(content)); // Step 2: parsing
+    }
 
-                    String className = classFile.getName().replace(".java", "");
-                    resultPromise.complete(new ClassDepsReport(className, usedTypes));
-
-                } catch (Exception e) {
-                    resultPromise.fail(e);
-                }
-            } else {
-                resultPromise.fail(res.cause());
+    private Future<ClassDepsReport> extractTypes(CompilationUnit cu) {
+        Set<String> usedTypes = new HashSet<>();
+        cu.accept(new VoidVisitorAdapter<Void>() {
+            @Override
+            public void visit(ClassOrInterfaceType type, Void arg) {
+                usedTypes.add(type.getNameAsString());
+                super.visit(type, arg);
             }
-        });
+        }, null);
+
+        String className = classFile.getName().replace(".java", "");
+        ClassDepsReport report = new ClassDepsReport(className, usedTypes);
+
+        return Future.succeededFuture(report);
     }
 }
