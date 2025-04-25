@@ -30,4 +30,4 @@ I may consider to render each dependency, creating a smaller object than the fil
 - Backpressure? Swing? Timeout? 
 - Package Clustering?
 
-- Sub-folders are not counted as different packages
+- Visualize progressively also the legend panel
