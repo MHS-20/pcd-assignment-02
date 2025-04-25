@@ -9,7 +9,7 @@ import java.awt.event.ActionEvent;
 import java.nio.file.Path;
 import java.util.Set;
 
-public class DependencyGraphApp extends JFrame {
+public class DependencyGraphView extends JFrame {
 
     private static final Path DEFAULT_PATH = Path.of("src/");
 
@@ -24,10 +24,10 @@ public class DependencyGraphApp extends JFrame {
     private Path selectedPath = DEFAULT_PATH;
     Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
-    public DependencyGraphApp() {
+    public DependencyGraphView() {
         setTitle("Dependency Analyzer");
-        //setSize(1200, 800);
-        setSize(screenSize.width, screenSize.height);
+        setSize(1200, 800);
+        //setSize(screenSize.width, screenSize.height);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         graphPanel.setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
@@ -72,26 +72,15 @@ public class DependencyGraphApp extends JFrame {
                 .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
                 .concatMap(file -> Observable.just(file).delay(500, java.util.concurrent.TimeUnit.MILLISECONDS))
                 .observeOn(Schedulers.io())
-                .subscribe(file -> {
-                    SwingUtilities.invokeLater(() -> {
-                        String fileName = file.filePath.getFileName().toString();
-                        Set<String> deps = file.dependencies;
-                        graphPanel.addFileWithDependencies(fileName, deps);
-                        fileCountLabel.setText(" Classes/Interfaces: " + ReactiveDependencyAnalyser.fileCount.get());
-                        packageCountLabel.setText(" Packages: " + ReactiveDependencyAnalyser.packageCount.get());
-                        depCountLabel.setText(" Dependencies: " + ReactiveDependencyAnalyser.dependencyCount.get());
-                    });
-                }, ex -> {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex));
-                }, () -> {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(this, "Analysis complete.");
-                    });
-                });
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new DependencyGraphApp().setVisible(true));
+                .subscribe(file -> SwingUtilities.invokeLater(() -> {
+                            String fileName = file.filePath.getFileName().toString();
+                            Set<String> deps = file.dependencies;
+                            graphPanel.addFileWithDependencies(fileName, deps);
+                            fileCountLabel.setText(" Classes/Interfaces: " + ReactiveDependencyAnalyser.fileCount.get());
+                            packageCountLabel.setText(" Packages: " + ReactiveDependencyAnalyser.packageCount.get());
+                            depCountLabel.setText(" Dependencies: " + ReactiveDependencyAnalyser.dependencyCount.get());
+                        }), ex -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex)),
+                        () -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Analysis complete.")));
     }
 }
 

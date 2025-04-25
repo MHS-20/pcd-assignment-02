@@ -8,15 +8,23 @@ public class DependencyGraphPanel extends JPanel {
 
     private final Map<String, Point> nodePositions = new HashMap<>();
     private final Map<String, Set<String>> edges = new HashMap<>();
+    private final Map<String, Color> packageColors = new HashMap<>();
     private final Random rand = new Random();
+
+    private int colorIndex = 0;
+    private final Color[] predefinedColors = {
+            Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA,
+            Color.CYAN, Color.PINK, Color.YELLOW, Color.GRAY, Color.DARK_GRAY
+    };
 
     int padding = 150;
     Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
-
     public void reset() {
         nodePositions.clear();
         edges.clear();
+        packageColors.clear();
+        colorIndex = 0;
         repaint();
     }
 
@@ -34,6 +42,16 @@ public class DependencyGraphPanel extends JPanel {
             nodePositions.put(name, new Point(padding + rand.nextInt(screenSize.width - padding * 2),
                     padding + rand.nextInt(screenSize.height - padding * 2)));
         }
+
+        // assing package color
+        String pkg = extractPackage(name);
+        packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
+    }
+
+    private String extractPackage(String fileName) {
+        return fileName.contains(".")
+                ? fileName.substring(0, fileName.lastIndexOf('.'))
+                : "default";
     }
 
     @Override
@@ -54,11 +72,16 @@ public class DependencyGraphPanel extends JPanel {
         }
 
         for (var entry : nodePositions.entrySet()) {
+            String name = entry.getKey();
             Point p = entry.getValue();
+
+            String pkg = extractPackage(name);
+            Color color = packageColors.getOrDefault(pkg, Color.BLUE);
+
             g2d.setColor(Color.BLUE);
             g2d.fillOval(p.x - 20, p.y - 20, 40, 40);
             g2d.setColor(Color.BLACK);
-            g2d.drawString(entry.getKey(), p.x - 20, p.y - 25);
+            g2d.drawString(name, p.x - 20, p.y - 25);
         }
     }
 }

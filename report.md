@@ -25,6 +25,6 @@ I may consider to render each dependency, creating a smaller object than the fil
 
 ### TODO:
 - Schedulers?
-- Single Dependecy Result?
+- Single Dependency Result?
 - Backpressure? Swing? Timeout? 
 - Package Clustering? Different colors?

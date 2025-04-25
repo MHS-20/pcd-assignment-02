@@ -69,9 +69,7 @@ public class ReactiveDependencyAnalyser {
                 dependencies.add(name);
                 dependencyCount.incrementAndGet();
             });
-            cu.getImports().forEach(importDecl -> {
-                dependencies.add(importDecl.getNameAsString());
-            });
+            cu.getImports().forEach(importDec -> dependencies.add(importDec.getNameAsString()));
         } catch (Exception e) {
             System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
         }
@@ -91,9 +89,9 @@ public class ReactiveDependencyAnalyser {
                         throwable -> System.err.println("Error: " + throwable),
                         () -> System.out.println("Project Analysis Completed")
                 );
-        System.out.println("Analized packaged: " + packageCount.get());
-        System.out.println("Analized files: " + fileCount.get());
-        System.out.println("Dependecies found: " + dependencyCount.get());
+        System.out.println("Analyzed packaged: " + packageCount.get());
+        System.out.println("Analyzed files: " + fileCount.get());
+        System.out.println("Dependencies found: " + dependencyCount.get());
     }
 
     public static void resetCounters() {
