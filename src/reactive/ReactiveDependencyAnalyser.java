@@ -4,6 +4,7 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import reactive.reports.FileDependencies;
 import reactive.reports.PackageDependencies;
 
@@ -18,8 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
-public class DependencyAnalyserRx {
+public class ReactiveDependencyAnalyser {
 
     public static AtomicInteger fileCount = new AtomicInteger(0);
     public static AtomicInteger packageCount = new AtomicInteger(0);
@@ -28,8 +28,8 @@ public class DependencyAnalyserRx {
     public static Observable<FileDependencies> analyzeFile(Path filePath) {
         fileCount.incrementAndGet();
         return Observable.fromCallable(() ->
-                new FileDependencies(filePath, extractDependencies(filePath)));
-        //.subscribeOn(Schedulers.io()); // Different thread for each file
+                        new FileDependencies(filePath, extractDependencies(filePath)))
+                .subscribeOn(Schedulers.io());
     }
 
     public static Observable<PackageDependencies> analyzePackage(Path packagePath) {
@@ -38,10 +38,8 @@ public class DependencyAnalyserRx {
             List<Path> javaFiles = files
                     .filter(p -> p.toString().endsWith(".java"))
                     .collect(Collectors.toList());
-//            System.out.println("Analyzing package: " + packagePath);
-//            System.out.println("Java files: " + javaFiles);
             return Observable.fromIterable(javaFiles)
-                    .flatMap(DependencyAnalyserRx::analyzeFile)
+                    .flatMap(ReactiveDependencyAnalyser::analyzeFile)
                     .toList()
                     .map(fileResults -> new PackageDependencies(packagePath, fileResults))
                     .toObservable();
@@ -55,12 +53,29 @@ public class DependencyAnalyserRx {
             List<Path> packageDirs = packages
                     .filter(Files::isDirectory)
                     .collect(Collectors.toList());
-
             return Observable.fromIterable(packageDirs)
-                    .flatMap(DependencyAnalyserRx::analyzePackage); // uno stream per package
+                    .flatMap(ReactiveDependencyAnalyser::analyzePackage); // uno stream per package
         } catch (IOException e) {
             return Observable.error(e);
         }
+    }
+
+    public static Set<String> extractDependencies(Path filePath) {
+        Set<String> dependencies = new HashSet<>();
+        try (FileInputStream in = new FileInputStream(filePath.toFile())) {
+            CompilationUnit cu = StaticJavaParser.parse(in);
+            cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
+                String name = type.getNameAsString();
+                dependencies.add(name);
+                dependencyCount.incrementAndGet();
+            });
+            cu.getImports().forEach(importDecl -> {
+                dependencies.add(importDecl.getNameAsString());
+            });
+        } catch (Exception e) {
+            System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
+        }
+        return dependencies;
     }
 
     public static void printProjectAnalysis(Path rootProjectPath) {
@@ -76,31 +91,9 @@ public class DependencyAnalyserRx {
                         throwable -> System.err.println("Error: " + throwable),
                         () -> System.out.println("Project Analysis Completed")
                 );
-
         System.out.println("Analized packaged: " + packageCount.get());
         System.out.println("Analized files: " + fileCount.get());
         System.out.println("Dependecies found: " + dependencyCount.get());
-    }
-
-
-    public static Set<String> extractDependencies(Path filePath) {
-        Set<String> dependencies = new HashSet<>();
-        try (FileInputStream in = new FileInputStream(filePath.toFile())) {
-            CompilationUnit cu = StaticJavaParser.parse(in);
-            cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
-                String name = type.getNameAsString();
-                dependencies.add(name);
-                dependencyCount.incrementAndGet();
-                // System.out.println("Dependencies: " + dependencies);
-            });
-            cu.getImports().forEach(importDecl -> {
-                dependencies.add(importDecl.getNameAsString());
-            });
-//            System.out.println("Dependencies: " + dependencies);
-        } catch (Exception e) {
-            System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
-        }
-        return dependencies;
     }
 
     public static void resetCounters() {

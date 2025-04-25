@@ -24,5 +24,7 @@ The GUI is re-rendered after each source file, since are the smallest unit proce
 I may consider to render each dependency, creating a smaller object than the file depencencies class.
 
 ### TODO:
-- Aggiungere una classe più piccola per fare il render delle singole dipendenze
-- provare ad aggiungere del clustering (non sembra funzionare bene, magari anche colori diversi)
+- Schedulers?
+- Single Dependecy Result?
+- Backpressure? Swing? Timeout? 
+- Package Clustering? Different colors?

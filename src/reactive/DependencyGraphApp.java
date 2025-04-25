@@ -65,10 +65,10 @@ public class DependencyGraphApp extends JFrame {
             return;
         }
 
-        DependencyAnalyserRx.resetCounters();
+        ReactiveDependencyAnalyser.resetCounters();
         graphPanel.reset();
 
-        DependencyAnalyserRx.analyzeProject(selectedPath)
+        ReactiveDependencyAnalyser.analyzeProject(selectedPath)
                 .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
                 .concatMap(file -> Observable.just(file).delay(500, java.util.concurrent.TimeUnit.MILLISECONDS))
                 .observeOn(Schedulers.io())
@@ -77,9 +77,9 @@ public class DependencyGraphApp extends JFrame {
                         String fileName = file.filePath.getFileName().toString();
                         Set<String> deps = file.dependencies;
                         graphPanel.addFileWithDependencies(fileName, deps);
-                        fileCountLabel.setText(" Classes/Interfaces: " + DependencyAnalyserRx.fileCount.get());
-                        packageCountLabel.setText(" Packages: " + DependencyAnalyserRx.packageCount.get());
-                        depCountLabel.setText(" Dependencies: " + DependencyAnalyserRx.dependencyCount.get());
+                        fileCountLabel.setText(" Classes/Interfaces: " + ReactiveDependencyAnalyser.fileCount.get());
+                        packageCountLabel.setText(" Packages: " + ReactiveDependencyAnalyser.packageCount.get());
+                        depCountLabel.setText(" Dependencies: " + ReactiveDependencyAnalyser.dependencyCount.get());
                     });
                 }, ex -> {
                     SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex));
