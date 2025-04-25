@@ -2,6 +2,7 @@ package reactive;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -49,12 +50,12 @@ public class ReactiveDependencyAnalyser {
     }
 
     public static Observable<PackageDependencies> analyzeProject(Path rootProjectPath) {
-        try (Stream<Path> packages = Files.list(rootProjectPath)) {
+        try (Stream<Path> packages = Files.walk(rootProjectPath)) {
             List<Path> packageDirs = packages
                     .filter(Files::isDirectory)
                     .collect(Collectors.toList());
             return Observable.fromIterable(packageDirs)
-                    .flatMap(ReactiveDependencyAnalyser::analyzePackage); // uno stream per package
+                    .flatMap(ReactiveDependencyAnalyser::analyzePackage);
         } catch (IOException e) {
             return Observable.error(e);
         }
@@ -64,8 +65,10 @@ public class ReactiveDependencyAnalyser {
         Set<String> dependencies = new HashSet<>();
         try (FileInputStream in = new FileInputStream(filePath.toFile())) {
             CompilationUnit cu = StaticJavaParser.parse(in);
-            cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
+            // cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
+            cu.findAll(ImportDeclaration.class).forEach(type -> {
                 String name = type.getNameAsString();
+                // System.out.println("Found dependency: " + name);
                 dependencies.add(name);
                 dependencyCount.incrementAndGet();
             });
@@ -82,8 +85,8 @@ public class ReactiveDependencyAnalyser {
                         pkgResult -> {
                             System.out.println("Package done: " + pkgResult.packagePath);
                             pkgResult.fileDependencies.forEach(fileResult -> {
-                                System.out.println("  File: " + fileResult.filePath);
-                                System.out.println("    Dependencies: " + fileResult.dependencies);
+                                System.out.println("\tFile: " + fileResult.filePath);
+                                System.out.println("\t\tDependencies: " + fileResult.dependencies);
                             });
                         },
                         throwable -> System.err.println("Error: " + throwable),

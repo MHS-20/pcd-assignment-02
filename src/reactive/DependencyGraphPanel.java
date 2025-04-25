@@ -9,7 +9,7 @@ public class DependencyGraphPanel extends JPanel {
     private final Map<String, Point> nodePositions = new HashMap<>();
     private final Map<String, Set<String>> edges = new HashMap<>();
     private final Map<String, Color> packageColors = new HashMap<>();
-    private final Random rand = new Random();
+    private final Random rand = new Random(42);
 
     private int colorIndex = 0;
     private final Color[] predefinedColors = {
@@ -43,16 +43,22 @@ public class DependencyGraphPanel extends JPanel {
                     padding + rand.nextInt(screenSize.height - padding * 2)));
         }
 
-        // assing package color
         String pkg = extractPackage(name);
-        packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
+        packageColors.computeIfAbsent(pkg, k -> new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
+        //packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
     }
 
     private String extractPackage(String fileName) {
+        //System.out.println("Extracting package from: " + fileName);
         return fileName.contains(".")
                 ? fileName.substring(0, fileName.lastIndexOf('.'))
                 : "default";
     }
+
+    public Map<String, Color> getPackageColors() {
+        return Collections.unmodifiableMap(packageColors);
+    }
+
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -78,8 +84,9 @@ public class DependencyGraphPanel extends JPanel {
             String pkg = extractPackage(name);
             Color color = packageColors.getOrDefault(pkg, Color.BLUE);
 
-            g2d.setColor(Color.BLUE);
-            g2d.fillOval(p.x - 20, p.y - 20, 40, 40);
+            g2d.setColor(color);
+            //g2d.setColor(Color.BLUE);
+            g2d.fillOval(p.x - 20, p.y - 20, 25, 25);
             g2d.setColor(Color.BLACK);
             g2d.drawString(name, p.x - 20, p.y - 25);
         }

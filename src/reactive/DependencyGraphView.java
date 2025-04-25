@@ -21,6 +21,8 @@ public class DependencyGraphView extends JFrame {
     private final JLabel depCountLabel = new JLabel("Dependencies: 0");
 
     private final DependencyGraphPanel graphPanel = new DependencyGraphPanel();
+    LegendPanel legendPanel = new LegendPanel(graphPanel.getPackageColors());
+
     private Path selectedPath = DEFAULT_PATH;
     Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
@@ -44,7 +46,12 @@ public class DependencyGraphView extends JFrame {
         statusPanel.add(depCountLabel);
         add(statusPanel, BorderLayout.SOUTH);
 
-        add(new JScrollPane(graphPanel), BorderLayout.CENTER);
+        //add(new JScrollPane(graphPanel), BorderLayout.CENTER);
+        //add(new JScrollPane(legendPanel), BorderLayout.EAST);
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(graphPanel), new JScrollPane(legendPanel));
+        splitPane.setDividerLocation(800);
+        add(splitPane, BorderLayout.CENTER);
 
         selectFolderButton.addActionListener(this::onSelectFolder);
         startButton.addActionListener(this::onStartAnalysis);
@@ -70,9 +77,10 @@ public class DependencyGraphView extends JFrame {
 
         ReactiveDependencyAnalyser.analyzeProject(selectedPath)
                 .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
-                .concatMap(file -> Observable.just(file).delay(500, java.util.concurrent.TimeUnit.MILLISECONDS))
+                .concatMap(file -> Observable.just(file).delay(100, java.util.concurrent.TimeUnit.MILLISECONDS))
                 .observeOn(Schedulers.io())
                 .subscribe(file -> SwingUtilities.invokeLater(() -> {
+                    // System.out.println("Processing file: " + file.filePath);
                             String fileName = file.filePath.getFileName().toString();
                             Set<String> deps = file.dependencies;
                             graphPanel.addFileWithDependencies(fileName, deps);
@@ -80,7 +88,13 @@ public class DependencyGraphView extends JFrame {
                             packageCountLabel.setText(" Packages: " + ReactiveDependencyAnalyser.packageCount.get());
                             depCountLabel.setText(" Dependencies: " + ReactiveDependencyAnalyser.dependencyCount.get());
                         }), ex -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex)),
-                        () -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Analysis complete.")));
+                        () -> SwingUtilities.invokeLater(() -> {
+                            legendPanel.updateLegend();
+                            JOptionPane.showMessageDialog(this, "Analysis complete.");
+                        }));
+
+        legendPanel.updateLegend();
+
     }
 }
 
