@@ -52,15 +52,20 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
             }));
         }
 
-        Promise<PackageDepsReport> result = Promise.promise();
+        return waitAll(futures)
+                .map(new PackageDepsReport(packageFolder.getName(), classDeps));
+    }
+
+    private Future<Void> waitAll(List<Future> futures) {
+        Promise<Void> promise = Promise.promise();
         CompositeFuture.all(futures).onComplete(ar -> {
             if (ar.succeeded()) {
-                result.complete(new PackageDepsReport(packageFolder.getName(), classDeps));
+                promise.complete();
             } else {
-                result.fail(ar.cause());
+                promise.fail(ar.cause());
             }
         });
-        return result.future();
+        return promise.future();
     }
 
 
