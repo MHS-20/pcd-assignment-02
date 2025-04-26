@@ -33,11 +33,31 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
                     File pkg = new File(packagePath);
                     if (!pkg.isDirectory()) continue;
 
+                    // parse java files in the package
                     Promise<PackageDepsReport> pkgPromise = Promise.promise();
                     vertx.deployVerticle(new PackageAnalyserVerticle(pkg, pkgPromise));
                     futures.add(pkgPromise.future().onSuccess(report -> {
-                        allDeps.put(pkg.getName(), report.getClassDependencies());
+                        allDeps.put(getRelativePath(projectFolder, pkg), report.getClassDependencies());
                     }));
+
+                    // parse sub-packages
+                    vertx.fileSystem().readDir(packagePath, ar2 -> {
+                        if (ar2.succeeded()) {
+                            var packageFiles = ar2.result();
+                            for (String subPackagePath : packageFiles) {
+                                File subPkg = new File(subPackagePath);
+                                if (subPkg.isDirectory()) {
+                                    //System.out.println("Sub-package found: " + subPackagePath);
+                                    // parse java files in the sub-package
+                                    Promise<PackageDepsReport> subPkgPromise = Promise.promise();
+                                    vertx.deployVerticle(new PackageAnalyserVerticle(subPkg, subPkgPromise));
+                                    futures.add(subPkgPromise.future().onSuccess(report -> {
+                                        allDeps.put(getRelativePath(projectFolder, subPkg), report.getClassDependencies());
+                                    }));
+                                }
+                            }
+                        }
+                    });
                 }
 
                 CompositeFuture.all(futures).onComplete(all -> {
@@ -52,4 +72,9 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
             }
         });
     }
+
+    private String getRelativePath(File root, File file) {
+        return root.toURI().relativize(file.toURI()).getPath();
+    }
+
 }
