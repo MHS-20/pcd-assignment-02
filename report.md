@@ -14,7 +14,13 @@ When all files' futures have completed, the package future completes.
 When all packages' futures have completed, the project future completes.
 
 ## 2. Reactive (Rx)
-A full subscription requires: onNext(), onError(), onCompleted()
+- A full subscription requires: onNext(), onError(), onCompleted()
+- Without using schedulers, by default all the computation, is done by the calling thread
+
+- observeOn: move the downstream computation to the specified scheduler, 
+delegates the reception of items
+- subscribeOn: move the computational work of an Observable on a specified scheduler, 
+delegates the production of items
 
 Collect dependencies in progressively larger objects.
 A class which contains the filename and the package name is emitted.
@@ -27,7 +33,6 @@ I may consider to render each dependency, creating a smaller object than the fil
 ### TODO:
 - Schedulers?
 - Single Dependency Result?
-- Backpressure? Swing? Timeout? 
+- Backpressure? Timeout? 
 - Package Clustering?
-
-- Visualize progressively also the legend panel
+- GUI clicks can be handled reactively

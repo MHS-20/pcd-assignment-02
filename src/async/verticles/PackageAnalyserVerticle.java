@@ -18,29 +18,36 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        File[] javaFiles = packageFolder.listFiles((dir, name) -> name.endsWith(".java"));
-        if (javaFiles == null || javaFiles.length == 0) {
-            resultPromise.complete(new PackageDepsReport(packageFolder.getName(), Collections.emptyMap()));
-            return;
-        }
-
-        Map<String, Set<String>> deps = new HashMap<>();
-        List<Future> futures = new ArrayList<>();
-
-        for (File javaFile : javaFiles) {
-            Promise<ClassDepsReport> classPromise = Promise.promise();
-            vertx.deployVerticle(new ClassAnalyserVerticle(javaFile, classPromise));
-            futures.add(classPromise.future().onSuccess(report -> {
-                deps.put(report.getClassName(), report.getUsedTypes());
-            }));
-        }
-
-        CompositeFuture.all(futures).onComplete(ar -> {
+        vertx.fileSystem().readDir(packageFolder.getAbsolutePath(), ".*\\.java$", ar -> {
             if (ar.succeeded()) {
-                resultPromise.complete(new PackageDepsReport(packageFolder.getName(), deps));
+                List<String> javaFiles = ar.result();
+                if (javaFiles.isEmpty()) {
+                    resultPromise.complete(new PackageDepsReport(packageFolder.getName(), Collections.emptyMap()));
+                    return;
+                }
+
+                Map<String, Set<String>> deps = new HashMap<>();
+                List<Future> futures = new ArrayList<>();
+
+                for (String filePath : javaFiles) {
+                    Promise<ClassDepsReport> classPromise = Promise.promise();
+                    vertx.deployVerticle(new ClassAnalyserVerticle(new File(filePath), classPromise));
+                    futures.add(classPromise.future().onSuccess(report -> {
+                        deps.put(report.getClassName(), report.getUsedTypes());
+                    }));
+                }
+
+                CompositeFuture.all(futures).onComplete(all -> {
+                    if (all.succeeded()) {
+                        resultPromise.complete(new PackageDepsReport(packageFolder.getName(), deps));
+                    } else {
+                        resultPromise.fail(all.cause());
+                    }
+                });
             } else {
                 resultPromise.fail(ar.cause());
             }
         });
     }
+
 }

@@ -51,7 +51,6 @@ public class ClassAnalyserVerticle extends AbstractVerticle {
 
         String className = classFile.getName().replace(".java", "");
         ClassDepsReport report = new ClassDepsReport(className, usedTypes);
-
         return Future.succeededFuture(report);
     }
 }

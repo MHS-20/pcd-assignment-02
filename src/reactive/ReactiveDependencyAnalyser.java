@@ -30,6 +30,7 @@ public class ReactiveDependencyAnalyser {
         fileCount.incrementAndGet();
         return Observable.fromCallable(() ->
                         new FileDependencies(filePath, extractDependencies(filePath)))
+                //.doOnNext(fileDeps -> fileCount.incrementAndGet())
                 .subscribeOn(Schedulers.io());
     }
 
@@ -55,7 +56,7 @@ public class ReactiveDependencyAnalyser {
                     .filter(Files::isDirectory)
                     .collect(Collectors.toList());
             return Observable.fromIterable(packageDirs)
-                    .flatMap(ReactiveDependencyAnalyser::analyzePackage);
+                    .flatMap(ReactiveDependencyAnalyser::analyzePackage).subscribeOn(Schedulers.io());
         } catch (IOException e) {
             return Observable.error(e);
         }
@@ -68,7 +69,6 @@ public class ReactiveDependencyAnalyser {
             // cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
             cu.findAll(ImportDeclaration.class).forEach(type -> {
                 String name = type.getNameAsString();
-                // System.out.println("Found dependency: " + name);
                 dependencies.add(name);
                 dependencyCount.incrementAndGet();
             });
