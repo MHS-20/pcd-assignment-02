@@ -10,6 +10,7 @@ import java.util.*;
 public class ProjectAnalyserVerticle extends AbstractVerticle {
     private final File projectFolder;
     private final Promise<ProjectDepsReport> resultPromise;
+    Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
 
     public ProjectAnalyserVerticle(File projectFolder, Promise<ProjectDepsReport> resultPromise) {
         this.projectFolder = projectFolder;
@@ -20,6 +21,8 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
     public void start() {
         listPackageFolders(projectFolder)
                 .compose(this::analyzePackages)
+                .compose(this::waitAll)
+                .map(this::buildReport)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
     }
@@ -40,9 +43,10 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    private Future<ProjectDepsReport> analyzePackages(List<File> packageFolders) {
-        List<Future> futures = new ArrayList<>();
-        Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
+    private Future<List<Future<?>>> analyzePackages(List<File> packageFolders) {
+        List<Future<?>> futures = new ArrayList<>();
+        //Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
+        allDeps.clear();
         for (File packageFolder : packageFolders) {
             Promise<PackageDepsReport> packagePromise = Promise.promise();
             vertx.deployVerticle(new PackageAnalyserVerticle(packageFolder, packagePromise));
@@ -52,8 +56,8 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
             }));
             futures.add(exploreSubPackages(packageFolder, allDeps));
         }
-        return waitAll(futures)
-                .map(new ProjectDepsReport(allDeps));
+        return Future.succeededFuture(futures);
+
     }
 
     private Future<Void> exploreSubPackages(File packageFolder, Map<String, Map<String, Set<String>>> allDeps) {
@@ -61,7 +65,7 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
             if (subFolders.isEmpty()) {
                 return Future.succeededFuture();
             }
-            List<Future> subFutures = new ArrayList<>();
+            List<Future<?>> subFutures = new ArrayList<>();
             for (File subFolder : subFolders) {
                 Promise<PackageDepsReport> subPromise = Promise.promise();
                 vertx.deployVerticle(new PackageAnalyserVerticle(subFolder, subPromise));
@@ -74,18 +78,14 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
         });
     }
 
-    private Future<Void> waitAll(List<Future> futures) {
-        Promise<Void> promise = Promise.promise();
-        CompositeFuture.all(futures).onComplete(ar -> {
-            if (ar.succeeded()) {
-                promise.complete();
-            } else {
-                promise.fail(ar.cause());
-            }
-        });
-        return promise.future();
+    private Future<Void> waitAll(List<Future<?>> futures) {
+        return CompositeFuture.all(new ArrayList<>(futures))
+                .mapEmpty();
     }
 
+    private ProjectDepsReport buildReport(Void unused) {
+        return new ProjectDepsReport(allDeps);
+    }
 
     private String getRelativePath(File root, File file) {
         return root.toURI().relativize(file.toURI()).getPath();

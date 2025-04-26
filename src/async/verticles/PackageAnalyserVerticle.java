@@ -10,6 +10,7 @@ import java.util.*;
 public class PackageAnalyserVerticle extends AbstractVerticle {
     private final File packageFolder;
     private final Promise<PackageDepsReport> resultPromise;
+    Map<String, Set<String>> classDeps = new HashMap<>();
 
     public PackageAnalyserVerticle(File packageFolder, Promise<PackageDepsReport> resultPromise) {
         this.packageFolder = packageFolder;
@@ -19,7 +20,9 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
     @Override
     public void start() {
         listJavaFiles(packageFolder)
-                .compose(this::analyzeFiles)
+                .compose(this::analyzeClasses)
+                .compose(this::waitAll)
+                .map(this::buildReport)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
     }
@@ -40,9 +43,10 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    private Future<PackageDepsReport> analyzeFiles(List<File> javaFiles) {
-        List<Future> futures = new ArrayList<>();
-        Map<String, Set<String>> classDeps = new HashMap<>();
+    private Future<List<Future<?>>> analyzeClasses(List<File> javaFiles) {
+        List<Future<?>> futures = new ArrayList<>();
+        //Map<String, Set<String>> classDeps = new HashMap<>();
+        classDeps.clear();
 
         for (File javaFile : javaFiles) {
             Promise<ClassDepsReport> classPromise = Promise.promise();
@@ -52,21 +56,16 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
             }));
         }
 
-        return waitAll(futures)
-                .map(new PackageDepsReport(packageFolder.getName(), classDeps));
+        return Future.succeededFuture(futures);
     }
 
-    private Future<Void> waitAll(List<Future> futures) {
-        Promise<Void> promise = Promise.promise();
-        CompositeFuture.all(futures).onComplete(ar -> {
-            if (ar.succeeded()) {
-                promise.complete();
-            } else {
-                promise.fail(ar.cause());
-            }
-        });
-        return promise.future();
+    private Future<Void> waitAll(List<Future<?>> futures) {
+        return CompositeFuture.all(new ArrayList<>(futures))
+                .mapEmpty();
     }
 
+    private PackageDepsReport buildReport(Void unused) {
+        return new PackageDepsReport(packageFolder.getName(), classDeps);
+    }
 
 }
