@@ -19,30 +19,33 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        listPackageFolders(projectFolder)
-                .compose(this::analyzePackages)        // Analizza i pacchetti principali
-                .compose(this::exploreAllSubPackages)   // Poi esplora anche tutti i sub-package
-                .map(this::buildReport)                 // Costruisci il report finale
+        analyzeAndExplore(projectFolder)
+                .map(this::buildReport)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
-
-//        listPackageFolders(projectFolder)
-//                .compose(this::analyzePackages)
-//                .compose(this::waitAll)
-//                .map(this::buildReport)
-//                .onSuccess(resultPromise::complete)
-//                .onFailure(resultPromise::fail);
     }
 
-    private Future<List<File>> listPackageFolders(File rootFolder) {
+    private Future<Void> analyzeAndExplore(File folder) {
+        List<Future<?>> subTasks = new ArrayList<>();
+        return analyzeCurrentPackage(folder)
+                .compose(v -> listSubPackages(folder))
+                .compose(subfolders -> {
+                    for (File subfolder : subfolders) {
+                        subTasks.add(analyzeAndExplore(subfolder));
+                    }
+                    return waitAll(subTasks);
+                });
+    }
+
+    private Future<List<File>> listSubPackages(File folder) {
         Promise<List<File>> promise = Promise.promise();
-        vertx.fileSystem().readDir(rootFolder.getAbsolutePath(), ar -> {
+        vertx.fileSystem().readDir(folder.getAbsolutePath(), ar -> {
             if (ar.succeeded()) {
-                List<File> folders = ar.result().stream()
+                List<File> subfolders = ar.result().stream()
                         .map(File::new)
                         .filter(File::isDirectory)
                         .toList();
-                promise.complete(folders);
+                promise.complete(subfolders);
             } else {
                 promise.fail(ar.cause());
             }
@@ -50,52 +53,19 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    private Future<List<File>> analyzePackages(List<File> packageFolders) {
-        List<Future<?>> futures = new ArrayList<>();
-        //Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
-        allDeps.clear();
-        for (File packageFolder : packageFolders) {
-            Promise<PackageDepsReport> packagePromise = Promise.promise();
-            vertx.deployVerticle(new PackageAnalyserVerticle(packageFolder, packagePromise));
-            futures.add(packagePromise.future().onSuccess(report -> {
-                String relativePackageName = getRelativePath(projectFolder, packageFolder);
-                allDeps.put(relativePackageName, report.getClassDependencies());
-            }));
-            //futures.add(exploreSubPackages(packageFolder, allDeps));
-        }
-        // return Future.succeededFuture(futures);
-        return waitAll(futures).map(v -> packageFolders);
-
+    private Future<Void> analyzeCurrentPackage(File folder) {
+        Promise<Void> promise = Promise.promise();
+        Promise<PackageDepsReport> packagePromise = Promise.promise();
+        vertx.deployVerticle(new PackageAnalyserVerticle(folder, packagePromise));
+        packagePromise.future()
+                .onSuccess(report -> {
+                    String relativePackageName = getRelativePath(projectFolder, folder);
+                    allDeps.put(relativePackageName, report.getClassDependencies());
+                    promise.complete();
+                })
+                .onFailure(promise::fail);
+        return promise.future();
     }
-
-    private Future<Void> exploreAllSubPackages(List<File> packageFolders) {
-        List<Future<?>> subpackageFutures = new ArrayList<>();
-        for (File packageFolder : packageFolders) {
-            subpackageFutures.add(exploreSubPackages(packageFolder));
-        }
-        return waitAll(subpackageFutures);
-    }
-
-
-    private Future<Void> exploreSubPackages(File packageFolder) {
-        return listPackageFolders(packageFolder)
-                .compose(subFolders -> {
-                    if (subFolders.isEmpty()) {
-                        return Future.succeededFuture();
-                    }
-                    List<Future<?>> subFutures = new ArrayList<>();
-                    for (File subFolder : subFolders) {
-                        Promise<PackageDepsReport> subPromise = Promise.promise();
-                        vertx.deployVerticle(new PackageAnalyserVerticle(subFolder, subPromise));
-                        subFutures.add(subPromise.future().onSuccess(report -> {
-                            String relativePackageName = getRelativePath(projectFolder, subFolder);
-                            allDeps.put(relativePackageName, report.getClassDependencies());
-                        }));
-                    }
-                    return waitAll(subFutures);
-                });
-    }
-
 
     private Future<Void> waitAll(List<Future<?>> futures) {
         return CompositeFuture.all(new ArrayList<>(futures))
