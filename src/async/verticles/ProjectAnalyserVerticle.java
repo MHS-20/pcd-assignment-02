@@ -10,7 +10,7 @@ import java.util.*;
 public class ProjectAnalyserVerticle extends AbstractVerticle {
     private final File projectFolder;
     private final Promise<ProjectDepsReport> resultPromise;
-    Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
+    Map<String, Map<String, Set<String>>> allDep = new HashMap<>();
 
     public ProjectAnalyserVerticle(File projectFolder, Promise<ProjectDepsReport> resultPromise) {
         this.projectFolder = projectFolder;
@@ -20,12 +20,14 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
     @Override
     public void start() {
         analyzeAndExplore(projectFolder)
+                .compose(this::waitAll)
                 .map(this::buildReport)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
     }
 
-    private Future<Void> analyzeAndExplore(File folder) {
+    // private Future<Void>
+    private Future<List<Future<?>>>  analyzeAndExplore(File folder) {
         List<Future<?>> subTasks = new ArrayList<>();
         return analyzeCurrentPackage(folder)
                 .compose(v -> listSubPackages(folder))
@@ -33,7 +35,8 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
                     for (File subfolder : subfolders) {
                         subTasks.add(analyzeAndExplore(subfolder));
                     }
-                    return waitAll(subTasks);
+                    //return waitAll(subTasks);
+                    return Future.succeededFuture(subTasks);
                 });
     }
 
@@ -60,7 +63,7 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
         packagePromise.future()
                 .onSuccess(report -> {
                     String relativePackageName = getRelativePath(projectFolder, folder);
-                    allDeps.put(relativePackageName, report.getClassDependencies());
+                    allDep.put(relativePackageName, report.getClassDependencies());
                     promise.complete();
                 })
                 .onFailure(promise::fail);
@@ -68,12 +71,12 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
     }
 
     private Future<Void> waitAll(List<Future<?>> futures) {
-        return CompositeFuture.all(new ArrayList<>(futures))
+        return Future.all(new ArrayList<>(futures))
                 .mapEmpty();
     }
 
     private ProjectDepsReport buildReport(Void unused) {
-        return new ProjectDepsReport(allDeps);
+        return new ProjectDepsReport(allDep);
     }
 
     private String getRelativePath(File root, File file) {

@@ -45,9 +45,7 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
 
     private Future<List<Future<?>>> analyzeClasses(List<File> javaFiles) {
         List<Future<?>> futures = new ArrayList<>();
-        //Map<String, Set<String>> classDeps = new HashMap<>();
         classDeps.clear();
-
         for (File javaFile : javaFiles) {
             Promise<ClassDepsReport> classPromise = Promise.promise();
             vertx.deployVerticle(new ClassAnalyserVerticle(javaFile, classPromise));
@@ -55,17 +53,15 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
                 classDeps.put(report.getClassName(), report.getUsedTypes());
             }));
         }
-
         return Future.succeededFuture(futures);
     }
 
     private Future<Void> waitAll(List<Future<?>> futures) {
-        return CompositeFuture.all(new ArrayList<>(futures))
+        return Future.all(new ArrayList<>(futures))
                 .mapEmpty();
     }
 
     private PackageDepsReport buildReport(Void unused) {
         return new PackageDepsReport(packageFolder.getName(), classDeps);
     }
-
 }

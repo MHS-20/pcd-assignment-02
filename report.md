@@ -13,6 +13,10 @@ Composing a future for each file.
 When all files' futures have completed, the package future completes.
 When all packages' futures have completed, the project future completes.
 
+Project Analyzer works recursively to create parallel PackageAnalyzers for all sub packages.
+While they terminate, it updates the project dependencies map.
+Each PackageAnalyzers create parallel ClassAnalyzers to parse the dependencies of source files. 
+
 ## 2. Reactive (Rx)
 - A full subscription requires: onNext(), onError(), onCompleted()
 - Without using schedulers, by default all the computation, is done by the calling thread
@@ -30,7 +34,7 @@ It's needed to distinguish between different classes and packages dependencies.
 The GUI is re-rendered after each source file, since are the smallest unit processable.
 I may consider to render each dependency, creating a smaller object than the file dependencies class.
 
-### TODO:
+### TODO pt2:
 - Schedulers?
 - Single Dependency Result?
 - Backpressure? Timeout? 
