@@ -10,6 +10,10 @@ public class ProjectDepsReport {
         this.packageDependencies = packageDependencies;
     }
 
+    public Map<String, Map<String, Set<String>>> getPackageDependencies() {
+        return packageDependencies;
+    }
+
     public String toString() {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, Map<String, Set<String>>> outerEntry : packageDependencies.entrySet()) {
