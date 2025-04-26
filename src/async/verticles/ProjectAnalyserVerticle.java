@@ -18,61 +18,90 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        vertx.fileSystem().readDir(projectFolder.getAbsolutePath(), ar -> {
+        listPackageFolders(projectFolder)
+                .compose(this::analyzePackages)
+                .onSuccess(resultPromise::complete)
+                .onFailure(resultPromise::fail);
+    }
+
+    private Future<List<File>> listPackageFolders(File rootFolder) {
+        Promise<List<File>> promise = Promise.promise();
+        vertx.fileSystem().readDir(rootFolder.getAbsolutePath(), ar -> {
             if (ar.succeeded()) {
-                List<String> packageDirs = ar.result();
-                if (packageDirs.isEmpty()) {
-                    resultPromise.complete(new ProjectDepsReport(Collections.emptyMap()));
+                List<File> folders = ar.result().stream()
+                        .map(File::new)
+                        .filter(File::isDirectory)
+                        .toList();
+                promise.complete(folders);
+            } else {
+                promise.fail(ar.cause());
+            }
+        });
+        return promise.future();
+    }
+
+    private Future<ProjectDepsReport> analyzePackages(List<File> packageFolders) {
+        List<Future> futures = new ArrayList<>();
+        Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
+
+        for (File packageFolder : packageFolders) {
+            Promise<PackageDepsReport> packagePromise = Promise.promise();
+            vertx.deployVerticle(new PackageAnalyserVerticle(packageFolder, packagePromise));
+            futures.add(packagePromise.future().onSuccess(report -> {
+                String relativePackageName = getRelativePath(projectFolder, packageFolder);
+                allDeps.put(relativePackageName, report.getClassDependencies());
+            }));
+
+            futures.add(exploreSubPackages(packageFolder, allDeps));
+        }
+
+        Promise<ProjectDepsReport> result = Promise.promise();
+        CompositeFuture.all(futures).onComplete(ar -> {
+            if (ar.succeeded()) {
+                result.complete(new ProjectDepsReport(allDeps));
+            } else {
+                result.fail(ar.cause());
+            }
+        });
+        return result.future();
+    }
+
+    private Future<Void> exploreSubPackages(File packageFolder, Map<String, Map<String, Set<String>>> allDeps) {
+        Promise<Void> promise = Promise.promise();
+        listPackageFolders(packageFolder).onComplete(ar -> {
+            if (ar.succeeded()) {
+                List<File> subFolders = ar.result();
+
+                if (subFolders.isEmpty()) {
+                    promise.complete();
                     return;
                 }
 
-                Map<String, Map<String, Set<String>>> allDeps = new HashMap<>();
-                List<Future> futures = new ArrayList<>();
-
-                for (String packagePath : packageDirs) {
-                    File pkg = new File(packagePath);
-                    if (!pkg.isDirectory()) continue;
-
-                    // parse java files in the package
-                    Promise<PackageDepsReport> pkgPromise = Promise.promise();
-                    vertx.deployVerticle(new PackageAnalyserVerticle(pkg, pkgPromise));
-                    futures.add(pkgPromise.future().onSuccess(report -> {
-                        allDeps.put(getRelativePath(projectFolder, pkg), report.getClassDependencies());
+                List<Future> subFutures = new ArrayList<>();
+                for (File subFolder : subFolders) {
+                    Promise<PackageDepsReport> subPromise = Promise.promise();
+                    vertx.deployVerticle(new PackageAnalyserVerticle(subFolder, subPromise));
+                    subFutures.add(subPromise.future().onSuccess(report -> {
+                        String relativePackageName = getRelativePath(projectFolder, subFolder);
+                        allDeps.put(relativePackageName, report.getClassDependencies());
                     }));
-
-                    // parse sub-packages
-                    vertx.fileSystem().readDir(packagePath, ar2 -> {
-                        if (ar2.succeeded()) {
-                            var packageFiles = ar2.result();
-                            for (String subPackagePath : packageFiles) {
-                                File subPkg = new File(subPackagePath);
-                                if (subPkg.isDirectory()) {
-                                    //System.out.println("Sub-package found: " + subPackagePath);
-                                    // parse java files in the sub-package
-                                    Promise<PackageDepsReport> subPkgPromise = Promise.promise();
-                                    vertx.deployVerticle(new PackageAnalyserVerticle(subPkg, subPkgPromise));
-                                    futures.add(subPkgPromise.future().onSuccess(report -> {
-                                        allDeps.put(getRelativePath(projectFolder, subPkg), report.getClassDependencies());
-                                    }));
-                                }
-                            }
-                        }
-                    });
                 }
 
-                CompositeFuture.all(futures).onComplete(all -> {
-                    if (all.succeeded()) {
-                        resultPromise.complete(new ProjectDepsReport(allDeps));
+                CompositeFuture.all(subFutures).onComplete(res -> {
+                    if (res.succeeded()) {
+                        promise.complete();
                     } else {
-                        resultPromise.fail(all.cause());
+                        promise.fail(res.cause());
                     }
                 });
             } else {
-                resultPromise.fail(ar.cause());
+                promise.fail(ar.cause());
             }
         });
-    }
 
+        return promise.future();
+    }
+    
     private String getRelativePath(File root, File file) {
         return root.toURI().relativize(file.toURI()).getPath();
     }
