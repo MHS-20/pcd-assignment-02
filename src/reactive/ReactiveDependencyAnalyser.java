@@ -35,9 +35,8 @@ public class ReactiveDependencyAnalyser {
     public static Observable<FileDependencies> analyzeFile(Path filePath) {
         fileCount.incrementAndGet();
         return extractDependencies(filePath)
-                .map(singleDep -> singleDep.dependency)
                 .toList()
-                .map(deps -> new FileDependencies(filePath, new HashSet<>(deps)))
+                .map(deps -> new FileDependencies(filePath, deps))
                 .toObservable()
                 .subscribeOn(Schedulers.io());
     }

@@ -1,8 +1,11 @@
 package reactive;
 
+import reactive.reports.SingleDependencyResult;
+
 import javax.swing.*;
 import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 public class DependencyGraphPanel extends JPanel {
 
@@ -28,11 +31,11 @@ public class DependencyGraphPanel extends JPanel {
         repaint();
     }
 
-    public void addFileWithDependencies(String file, Set<String> deps) {
+    public void addFileWithDependencies(String file, List<SingleDependencyResult> deps) {
         ensureNode(file);
-        for (String dep : deps) {
-            ensureNode(dep);
-            edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep);
+        for (SingleDependencyResult dep : deps) {
+            ensureNode(dep.dependency);
+            edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep.dependency);
         }
         repaint();
     }
@@ -52,11 +55,11 @@ public class DependencyGraphPanel extends JPanel {
         if (fileName != null && fileName.endsWith(".java")) {
             fileName = fileName.substring(0, fileName.length() - 5);
         }
-        fileName = fileName.replace("/", ".");
-        fileName = fileName.replace("\\", ".");
-        return fileName;
-    }
 
+        return fileName
+                .replace("/", ".")
+                .replace("\\", ".");
+    }
 
     private String extractPackage(String fileName) {
         System.out.println("Extracting package from: " + fileName);
