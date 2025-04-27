@@ -8,14 +8,13 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import reactive.reports.FileDependencies;
 import reactive.reports.PackageDependencies;
+import reactive.reports.SingleDependencyResult;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,10 +25,20 @@ public class ReactiveDependencyAnalyser {
     public static AtomicInteger packageCount = new AtomicInteger(0);
     public static AtomicInteger dependencyCount = new AtomicInteger(0);
 
+//    public static Observable<FileDependencies> analyzeFile(Path filePath) {
+//        fileCount.incrementAndGet();
+//        return Observable.fromCallable(() ->
+//                        new FileDependencies(filePath, extractDependencies(filePath)))
+//                .subscribeOn(Schedulers.io());
+//    }
+
     public static Observable<FileDependencies> analyzeFile(Path filePath) {
         fileCount.incrementAndGet();
-        return Observable.fromCallable(() ->
-                        new FileDependencies(filePath, extractDependencies(filePath)))
+        return extractDependencies(filePath)
+                .map(singleDep -> singleDep.dependency)
+                .toList()
+                .map(deps -> new FileDependencies(filePath, new HashSet<>(deps)))
+                .toObservable()
                 .subscribeOn(Schedulers.io());
     }
 
@@ -62,22 +71,45 @@ public class ReactiveDependencyAnalyser {
         }
     }
 
-    public static Set<String> extractDependencies(Path filePath) {
-        Set<String> dependencies = new HashSet<>();
-        try (FileInputStream in = new FileInputStream(filePath.toFile())) {
-            CompilationUnit cu = StaticJavaParser.parse(in);
-            // cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
-            cu.findAll(ImportDeclaration.class).forEach(type -> {
-                String name = type.getNameAsString();
-                dependencies.add(name);
-                dependencyCount.incrementAndGet();
-            });
-            cu.getImports().forEach(importDec -> dependencies.add(importDec.getNameAsString()));
-        } catch (Exception e) {
-            System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
-        }
-        return dependencies;
+    public static Observable<SingleDependencyResult> extractDependencies(Path filePath) {
+        return Observable.<SingleDependencyResult>create(emitter -> {
+            try (FileInputStream in = new FileInputStream(filePath.toFile())) {
+                CompilationUnit cu = StaticJavaParser.parse(in);
+                Set<String> dependencies = new HashSet<>();
+
+                cu.findAll(ImportDeclaration.class).forEach(importDecl -> {
+                    String name = importDecl.getNameAsString();
+                    dependencies.add(name);
+                });
+
+                for (String dep : dependencies) {
+                    dependencyCount.incrementAndGet();
+                    emitter.onNext(new SingleDependencyResult(filePath, dep));
+                }
+                emitter.onComplete();
+            } catch (Exception e) {
+                emitter.onError(e);
+            }
+        }).subscribeOn(Schedulers.io());
     }
+
+
+//    public static Set<String> extractDependencies(Path filePath) {
+//        Set<String> dependencies = new HashSet<>();
+//        try (FileInputStream in = new FileInputStream(filePath.toFile())) {
+//            CompilationUnit cu = StaticJavaParser.parse(in);
+//            // cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
+//            cu.findAll(ImportDeclaration.class).forEach(type -> {
+//                String name = type.getNameAsString();
+//                dependencies.add(name);
+//                dependencyCount.incrementAndGet();
+//            });
+//            cu.getImports().forEach(importDec -> dependencies.add(importDec.getNameAsString()));
+//        } catch (Exception e) {
+//            System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
+//        }
+//        return dependencies;
+//    }
 
     public static void printProjectAnalysis(Path rootProjectPath) {
         analyzeProject(rootProjectPath)
