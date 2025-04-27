@@ -53,9 +53,6 @@ public class DependencyGraphView extends JFrame {
         statusPanel.add(depCountLabel);
         add(statusPanel, BorderLayout.SOUTH);
 
-        //add(new JScrollPane(graphPanel), BorderLayout.CENTER);
-        //add(new JScrollPane(legendPanel), BorderLayout.EAST);
-
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(graphPanel), new JScrollPane(legendPanel));
         splitPane.setDividerLocation(800);
         add(splitPane, BorderLayout.CENTER);
@@ -88,7 +85,7 @@ public class DependencyGraphView extends JFrame {
             return;
         }
 
-        ReactiveDependencyAnalyser.resetCounters();
+        //ReactiveDependencyAnalyser.resetCounters();
         graphPanel.reset();
         resetCounters();
 
@@ -101,11 +98,10 @@ public class DependencyGraphView extends JFrame {
                 .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
                 .concatMap(file -> Observable.just(file).delay(100, TimeUnit.MILLISECONDS))
                 .subscribe(file -> SwingUtilities.invokeLater(() -> {
-                            String fileName = file.filePath.getFileName().toString();
+                            String fileName = file.filePath.toString();
                             graphPanel.addFileWithDependencies(fileName, file.dependencies);
                             fileCount.incrementAndGet();
                             dependencyCount.addAndGet(file.dependencies.size());
-
                             legendPanel.updateLegend();
                             fileCountLabel.setText(" Classes/Interfaces: " + fileCount.get());
                             depCountLabel.setText(" Dependencies: " + dependencyCount.get());
@@ -115,7 +111,4 @@ public class DependencyGraphView extends JFrame {
                             JOptionPane.showMessageDialog(this, "Analysis complete.");
                         }));
     }
-
-
 }
-

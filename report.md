@@ -6,7 +6,26 @@ Alternatives:
 * Future & Promises
 * EventBus & Topics
 
-A more idiomatic or modular approach?
+### TODO pt1:
+- Check return types (list<future>)
+- Explain return types in report
+
+* Appunti lezione: 
+Le promise vengono usate per scrivere metodi asincroni.
+Creo la promise tipata in base al risultato che devo ritornare,
+ed immediatamente ritorno la future associata.
+
+Un metodo è asincrono solo se restituisce un future.
+Per restituire un future deve crearsi una promise.
+
+Le promise sono thread-safe, perché le posso passare ad altri thread,
+ed usarle per attendere il risultato.
+
+Nei verticle è l'event-loop che esegue le callback, 
+anche se un'operazione finisce prima di aver agganciato l'handler, 
+non viene perso perché l'event loop lo controlla al giro dopo,
+basta associare l'handler prima di terminare il metodo.
+
 
 ### Future Composition
 Composing a future for each file.

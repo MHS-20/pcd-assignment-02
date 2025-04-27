@@ -43,13 +43,21 @@ public class DependencyGraphPanel extends JPanel {
                     padding + rand.nextInt(screenSize.height - padding * 2)));
         }
 
-        String pkg = extractPackage(name);
+        String pkg = removeJavaExtension(name);
         packageColors.computeIfAbsent(pkg, k -> new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         //packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
     }
 
+    public String removeJavaExtension(String fileName) {
+        if (fileName != null && fileName.endsWith(".java")) {
+            return fileName.substring(0, fileName.length() - 5);
+        }
+        return fileName;
+    }
+
+
     private String extractPackage(String fileName) {
-        //System.out.println("Extracting package from: " + fileName);
+        System.out.println("Extracting package from: " + fileName);
         return fileName.contains(".")
                 ? fileName.substring(0, fileName.lastIndexOf('.'))
                 : "default";
@@ -81,7 +89,7 @@ public class DependencyGraphPanel extends JPanel {
             String name = entry.getKey();
             Point p = entry.getValue();
 
-            String pkg = extractPackage(name);
+            String pkg = removeJavaExtension(name);
             Color color = packageColors.getOrDefault(pkg, Color.BLUE);
 
             g2d.setColor(color);

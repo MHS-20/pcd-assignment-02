@@ -28,9 +28,9 @@ public class ReactiveDependencyAnalyser {
 
     public static Observable<FileDependencies> analyzeFile(Path filePath) {
         fileCount.incrementAndGet();
+        System.out.println("Analyzing file: " + filePath);
         return Observable.fromCallable(() ->
                         new FileDependencies(filePath, extractDependencies(filePath)))
-                //.doOnNext(fileDeps -> fileCount.incrementAndGet())
                 .subscribeOn(Schedulers.io());
     }
 
@@ -56,7 +56,8 @@ public class ReactiveDependencyAnalyser {
                     .filter(Files::isDirectory)
                     .collect(Collectors.toList());
             return Observable.fromIterable(packageDirs)
-                    .flatMap(ReactiveDependencyAnalyser::analyzePackage).subscribeOn(Schedulers.io());
+                    .flatMap(ReactiveDependencyAnalyser::analyzePackage)
+                    .subscribeOn(Schedulers.io());
         } catch (IOException e) {
             return Observable.error(e);
         }
