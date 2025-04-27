@@ -102,6 +102,7 @@ public class DependencyGraphView extends JFrame {
                             graphPanel.addFileWithDependencies(fileName, file.dependencies);
                             fileCount.incrementAndGet();
                             dependencyCount.addAndGet(file.dependencies.size());
+
                             legendPanel.updateLegend();
                             fileCountLabel.setText(" Classes/Interfaces: " + fileCount.get());
                             depCountLabel.setText(" Dependencies: " + dependencyCount.get());

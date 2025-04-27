@@ -50,8 +50,10 @@ public class DependencyGraphPanel extends JPanel {
 
     public String removeJavaExtension(String fileName) {
         if (fileName != null && fileName.endsWith(".java")) {
-            return fileName.substring(0, fileName.length() - 5);
+            fileName = fileName.substring(0, fileName.length() - 5);
         }
+        fileName = fileName.replace("/", ".");
+        fileName = fileName.replace("\\", ".");
         return fileName;
     }
 

@@ -28,7 +28,7 @@ public class ReactiveDependencyAnalyser {
 
     public static Observable<FileDependencies> analyzeFile(Path filePath) {
         fileCount.incrementAndGet();
-        System.out.println("Analyzing file: " + filePath);
+        //System.out.println("Analyzing file: " + filePath);
         return Observable.fromCallable(() ->
                         new FileDependencies(filePath, extractDependencies(filePath)))
                 .subscribeOn(Schedulers.io());
@@ -36,7 +36,7 @@ public class ReactiveDependencyAnalyser {
 
     public static Observable<PackageDependencies> analyzePackage(Path packagePath) {
         packageCount.incrementAndGet();
-        try (Stream<Path> files = Files.walk(packagePath)) {
+        try (Stream<Path> files = Files.list(packagePath)) {
             List<Path> javaFiles = files
                     .filter(p -> p.toString().endsWith(".java"))
                     .collect(Collectors.toList());
