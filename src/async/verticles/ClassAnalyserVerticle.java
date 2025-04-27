@@ -64,16 +64,27 @@ public class ClassAnalyserVerticle extends AbstractVerticle {
 
     private Future<ClassDepsReport> extractTypes(CompilationUnit cu) {
         return vertx.executeBlocking(() -> {
-                Set<String> usedTypes = new HashSet<>();
-                cu.accept(new VoidVisitorAdapter<Void>() {
-                    @Override
-                    public void visit(ClassOrInterfaceType type, Void arg) {
-                        usedTypes.add(type.getNameAsString());
-                        super.visit(type, arg);
-                    }
-                }, null);
-                String className = classFile.getName().replace(".java", "");
-                return new ClassDepsReport(className, usedTypes);
+            Set<String> usedTypes = new HashSet<>();
+            cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
+                usedTypes.add(type.getNameAsString());
+            });
+            String className = classFile.getName().replace(".java", "");
+            return new ClassDepsReport(className, usedTypes);
         });
     }
+
+//    private Future<ClassDepsReport> extractTypes(CompilationUnit cu) {
+//        return vertx.executeBlocking(() -> {
+//                Set<String> usedTypes = new HashSet<>();
+//                cu.accept(new VoidVisitorAdapter<Void>() {
+//                    @Override
+//                    public void visit(ClassOrInterfaceType type, Void arg) {
+//                        usedTypes.add(type.getNameAsString());
+//                        super.visit(type, arg);
+//                    }
+//                }, null);
+//                String className = classFile.getName().replace(".java", "");
+//                return new ClassDepsReport(className, usedTypes);
+//        });
+//    }
 }
