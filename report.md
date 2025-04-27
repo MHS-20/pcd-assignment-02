@@ -26,6 +26,9 @@ anche se un'operazione finisce prima di aver agganciato l'handler,
 non viene perso perché l'event loop lo controlla al giro dopo,
 basta associare l'handler prima di terminare il metodo.
 
+ExecuteBlocking serve a far eseguire il codice ad un worker, e non all'avent-loop.
+Però non bisogna accedere a variabili condivise, altrimenti ci sono corse critiche con l'event-loop.
+
 
 ### Future Composition
 Composing a future for each file.

@@ -21,7 +21,7 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
     public void start() {
         listJavaFiles(packageFolder)
                 .compose(this::analyzeClasses)
-                .compose(this::waitAll)
+                //.compose(this::waitAll)
                 .map(this::buildReport)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
@@ -43,21 +43,23 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
         return promise.future();
     }
 
-    private Future<List<Future<?>>> analyzeClasses(List<File> javaFiles) {
-        List<Future<?>> futures = new ArrayList<>();
+    // Future<List<Future<ClassDepsReport>>>
+    private Future<Void> analyzeClasses(List<File> javaFiles) {
+        List<Future<ClassDepsReport>> futures = new ArrayList<>();
         classDeps.clear();
         for (File javaFile : javaFiles) {
             Promise<ClassDepsReport> classPromise = Promise.promise();
             vertx.deployVerticle(new ClassAnalyserVerticle(javaFile, classPromise));
-            futures.add(classPromise.future().onSuccess(report -> {
-                classDeps.put(report.getClassName(), report.getUsedTypes());
-            }));
+            futures.add(classPromise.future().onSuccess(report ->
+                    classDeps.put(report.getClassName(), report.getUsedTypes())));
         }
-        return Future.succeededFuture(futures);
+        //return Future.succeededFuture(futures); // don't wait for completion here
+        return waitAll(futures);
     }
 
-    private Future<Void> waitAll(List<Future<?>> futures) {
-        return Future.all(new ArrayList<>(futures))
+
+    private Future<Void> waitAll(List<Future<ClassDepsReport>> futures) {
+        return Future.all(futures)
                 .mapEmpty();
     }
 

@@ -20,14 +20,14 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
     @Override
     public void start() {
         analyzeAndExplore(projectFolder)
-                .compose(this::waitAll)
+                //.compose(this::waitAll)
                 .map(this::buildReport)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
     }
 
-    // private Future<Void>
-    private Future<List<Future<?>>>  analyzeAndExplore(File folder) {
+    // private Future<List<Future<?>>>
+    private Future<Void> analyzeAndExplore(File folder) {
         List<Future<?>> subTasks = new ArrayList<>();
         return analyzeCurrentPackage(folder)
                 .compose(v -> listSubPackages(folder))
@@ -35,8 +35,8 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
                     for (File subfolder : subfolders) {
                         subTasks.add(analyzeAndExplore(subfolder));
                     }
-                    //return waitAll(subTasks);
-                    return Future.succeededFuture(subTasks);
+                    return waitAll(subTasks);
+                    //return Future.succeededFuture(subTasks);
                 });
     }
 
@@ -71,7 +71,7 @@ public class ProjectAnalyserVerticle extends AbstractVerticle {
     }
 
     private Future<Void> waitAll(List<Future<?>> futures) {
-        return Future.all(new ArrayList<>(futures))
+        return Future.all(futures)
                 .mapEmpty();
     }
 

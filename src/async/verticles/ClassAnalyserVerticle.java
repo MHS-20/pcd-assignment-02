@@ -5,6 +5,7 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
 import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
@@ -24,7 +25,7 @@ public class ClassAnalyserVerticle extends AbstractVerticle {
     @Override
     public void start() {
         readFile(classFile)
-                .compose(this::parseToAST)
+                .compose(this::parseAST)
                 .compose(this::extractTypes)
                 .onSuccess(resultPromise::complete)
                 .onFailure(resultPromise::fail);
@@ -35,22 +36,44 @@ public class ClassAnalyserVerticle extends AbstractVerticle {
                 .map(Buffer::toString);
     }
 
-    private Future<CompilationUnit> parseToAST(String content) {
-        return Future.succeededFuture(StaticJavaParser.parse(content)); // Step 2: parsing
+//    private Future<CompilationUnit> parseAST(String content) {
+//        return Future.succeededFuture(StaticJavaParser.parse(content));
+//    }
+
+    private Future<CompilationUnit> parseAST(String content) {
+        return this.getVertx().executeBlocking(() -> {
+            JavaParser jp = new JavaParser();
+            return jp.parse(content).getResult()
+                    .orElseThrow(() -> new RuntimeException("Failed to parse Java file: " + classFile.getName()));
+        });
     }
 
-    private Future<ClassDepsReport> extractTypes(CompilationUnit cu) {
-        Set<String> usedTypes = new HashSet<>();
-        cu.accept(new VoidVisitorAdapter<Void>() {
-            @Override
-            public void visit(ClassOrInterfaceType type, Void arg) {
-                usedTypes.add(type.getNameAsString());
-                super.visit(type, arg);
-            }
-        }, null);
+//    private Future<ClassDepsReport> extractTypes(CompilationUnit cu) {
+//        Set<String> usedTypes = new HashSet<>();
+//        cu.accept(new VoidVisitorAdapter<Void>() {
+//            @Override
+//            public void visit(ClassOrInterfaceType type, Void arg) {
+//                usedTypes.add(type.getNameAsString());
+//                super.visit(type, arg);
+//            }
+//        }, null);
+//        String className = classFile.getName().replace(".java", "");
+//        ClassDepsReport report = new ClassDepsReport(className, usedTypes);
+//        return Future.succeededFuture(report);
+//    }
 
-        String className = classFile.getName().replace(".java", "");
-        ClassDepsReport report = new ClassDepsReport(className, usedTypes);
-        return Future.succeededFuture(report);
+    private Future<ClassDepsReport> extractTypes(CompilationUnit cu) {
+        return vertx.executeBlocking(() -> {
+                Set<String> usedTypes = new HashSet<>();
+                cu.accept(new VoidVisitorAdapter<Void>() {
+                    @Override
+                    public void visit(ClassOrInterfaceType type, Void arg) {
+                        usedTypes.add(type.getNameAsString());
+                        super.visit(type, arg);
+                    }
+                }, null);
+                String className = classFile.getName().replace(".java", "");
+                return new ClassDepsReport(className, usedTypes);
+        });
     }
 }
