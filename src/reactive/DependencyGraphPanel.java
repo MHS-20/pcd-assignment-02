@@ -49,7 +49,6 @@ public class DependencyGraphPanel extends JPanel {
         repaint();
     }
 
-
     private void ensureNode(String name) {
         if (!nodePositions.containsKey(name)) {
             nodePositions.put(name, new Point(padding + rand.nextInt(screenSize.width - padding * 2),
@@ -61,7 +60,25 @@ public class DependencyGraphPanel extends JPanel {
         //packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
     }
 
-    private void ensureNode(String name, boolean isMainFile) {
+//    private void ensureNode(String name, boolean isMainFile) {
+//        if (!nodePositions.containsKey(name)) {
+//            nodePositions.put(name, new Point(
+//                    padding + rand.nextInt(screenSize.width - padding * 2),
+//                    padding + rand.nextInt(screenSize.height - padding * 2)
+//            ));
+//        }
+//
+//        String pkg = removeJavaExtension(name);
+//        packageColors.computeIfAbsent(pkg, k -> {
+//            if (isMainFile) {
+//                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)); // random per i file principali
+//            } else {
+//                return Color.GRAY; // fisso grigio per le dipendenze
+//            }
+//        });
+//    }
+
+    private void ensureNode(String name, boolean isSrcFile) {
         if (!nodePositions.containsKey(name)) {
             nodePositions.put(name, new Point(
                     padding + rand.nextInt(screenSize.width - padding * 2),
@@ -71,10 +88,11 @@ public class DependencyGraphPanel extends JPanel {
 
         String pkg = removeJavaExtension(name);
         packageColors.computeIfAbsent(pkg, k -> {
-            if (isMainFile) {
-                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)); // random per i file principali
+            if (isSrcFile) {
+                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256));
             } else {
-                return Color.GRAY; // fisso grigio per le dipendenze
+                int grayValue = 80 + rand.nextInt(120); // sfumature tra 80 e 200
+                return new Color(grayValue, grayValue, grayValue);
             }
         });
     }
@@ -99,7 +117,6 @@ public class DependencyGraphPanel extends JPanel {
     public Map<String, Color> getPackageColors() {
         return Collections.unmodifiableMap(packageColors);
     }
-
 
     @Override
     protected void paintComponent(Graphics g) {

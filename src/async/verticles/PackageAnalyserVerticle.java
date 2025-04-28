@@ -56,8 +56,7 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
         //return Future.succeededFuture(futures); // don't wait for completion here
         return waitAll(futures);
     }
-
-
+    
     private Future<Void> waitAll(List<Future<ClassDepsReport>> futures) {
         return Future.all(futures)
                 .mapEmpty();
