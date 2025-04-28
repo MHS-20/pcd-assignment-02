@@ -1,14 +1,10 @@
 package reactive;
 
 import com.github.javaparser.JavaParser;
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import reactive.reports.FileDependencies;
-import reactive.reports.PackageDependencies;
 import reactive.reports.SingleDependencyResult;
 
 import java.io.FileInputStream;
@@ -26,39 +22,28 @@ public class ReactiveDependencyAnalyser {
     public static AtomicInteger packageCount = new AtomicInteger(0);
     public static AtomicInteger dependencyCount = new AtomicInteger(0);
 
-//    public static Observable<FileDependencies> analyzeFile(Path filePath) {
-//        fileCount.incrementAndGet();
-//        return Observable.fromCallable(() ->
-//                        new FileDependencies(filePath, extractDependencies(filePath)))
-//                .subscribeOn(Schedulers.io());
-//    }
-
-    public static Observable<FileDependencies> analyzeFile(Path filePath) {
+    public static Observable<SingleDependencyResult> analyzeFile(Path filePath, String packageName) {
         fileCount.incrementAndGet();
         return extractDependencies(filePath)
-                .toList()
-                .map(deps -> new FileDependencies(filePath, deps))
-                .toObservable()
+                .doOnNext(dep -> dep.setFileName(filePath.toString()))
+                .doOnNext(dep -> dep.setPackageName(packageName))
                 .subscribeOn(Schedulers.io());
     }
 
-    public static Observable<PackageDependencies> analyzePackage(Path packagePath) {
+    public static Observable<SingleDependencyResult> analyzePackage(Path packagePath) {
         packageCount.incrementAndGet();
         try (Stream<Path> files = Files.list(packagePath)) {
             List<Path> javaFiles = files
                     .filter(p -> p.toString().endsWith(".java"))
                     .collect(Collectors.toList());
             return Observable.fromIterable(javaFiles)
-                    .flatMap(ReactiveDependencyAnalyser::analyzeFile)
-                    .toList()
-                    .map(fileResults -> new PackageDependencies(packagePath, fileResults))
-                    .toObservable();
+                    .flatMap(file -> analyzeFile(file, packagePath.toString()));
         } catch (IOException e) {
             return Observable.error(e);
         }
     }
 
-    public static Observable<PackageDependencies> analyzeProject(Path rootProjectPath) {
+    public static Observable<SingleDependencyResult> analyzeProject(Path rootProjectPath) {
         try (Stream<Path> packages = Files.walk(rootProjectPath)) {
             List<Path> packageDirs = packages
                     .filter(Files::isDirectory)
@@ -80,7 +65,6 @@ public class ReactiveDependencyAnalyser {
 
                 cu.findAll(ClassOrInterfaceType.class).forEach(decl -> {
                     String name = decl.getNameAsString();
-                    //System.out.println("Parsed dependency: " + name);
                     dependencies.add(name);
                 });
 
@@ -96,44 +80,21 @@ public class ReactiveDependencyAnalyser {
     }
 
 
-//    public static Set<String> extractDependencies(Path filePath) {
-//        Set<String> dependencies = new HashSet<>();
-//        try (FileInputStream in = new FileInputStream(filePath.toFile())) {
-//            CompilationUnit cu = StaticJavaParser.parse(in);
-//            // cu.findAll(ClassOrInterfaceType.class).forEach(type -> {
-//            cu.findAll(ImportDeclaration.class).forEach(type -> {
-//                String name = type.getNameAsString();
-//                dependencies.add(name);
-//                dependencyCount.incrementAndGet();
-//            });
-//            cu.getImports().forEach(importDec -> dependencies.add(importDec.getNameAsString()));
-//        } catch (Exception e) {
-//            System.err.println("Error while parsing: " + filePath + " -> " + e.getMessage());
-//        }
-//        return dependencies;
-//    }
-
     public static void printProjectAnalysis(Path rootProjectPath) {
         analyzeProject(rootProjectPath)
                 .subscribe(
-                        pkgResult -> {
-                            System.out.println("Package done: " + pkgResult.packagePath);
-                            pkgResult.fileDependencies.forEach(fileResult -> {
-                                System.out.println("\tFile: " + fileResult.filePath);
-                                System.out.println("\t\tDependencies: " + fileResult.dependencies);
-                            });
+                        result -> {
+                            System.out.println("Package: " + result.getPackageName());
+                            System.out.println("\tFile: " + result.getFileName());
+                            System.out.println("\t\tDependency: " + result.getDependency());
                         },
                         throwable -> System.err.println("Error: " + throwable),
-                        () -> System.out.println("Project Analysis Completed")
+                        () -> {
+                            System.out.println("Project Analysis Completed");
+                            System.out.println("Analyzed packages: " + packageCount.get());
+                            System.out.println("Analyzed files: " + fileCount.get());
+                            System.out.println("Dependencies found: " + dependencyCount.get());
+                        }
                 );
-        System.out.println("Analyzed packaged: " + packageCount.get());
-        System.out.println("Analyzed files: " + fileCount.get());
-        System.out.println("Dependencies found: " + dependencyCount.get());
-    }
-
-    public static void resetCounters() {
-        fileCount.set(0);
-        packageCount.set(0);
-        dependencyCount.set(0);
     }
 }

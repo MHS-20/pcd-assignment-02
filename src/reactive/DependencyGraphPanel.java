@@ -31,52 +31,12 @@ public class DependencyGraphPanel extends JPanel {
         repaint();
     }
 
-//    public void addFileWithDependencies(String file, List<SingleDependencyResult> deps) {
-//        ensureNode(file);
-//        for (SingleDependencyResult dep : deps) {
-//            ensureNode(dep.dependency);
-//            edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep.dependency);
-//        }
-//        repaint();
-//    }
-
-    public void addFileWithDependencies(String file, List<SingleDependencyResult> deps) {
-        ensureNode(file, true);
-        for (SingleDependencyResult dep : deps) {
-            ensureNode(dep.dependency, false);
-            edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep.dependency);
-        }
+    public void addDependency(SingleDependencyResult dependency) {
+        ensureNode(dependency.fileName, true);
+        ensureNode(dependency.dependency, false);
+        edges.computeIfAbsent(dependency.fileName, k -> new HashSet<>()).add(dependency.dependency);
         repaint();
     }
-
-    private void ensureNode(String name) {
-        if (!nodePositions.containsKey(name)) {
-            nodePositions.put(name, new Point(padding + rand.nextInt(screenSize.width - padding * 2),
-                    padding + rand.nextInt(screenSize.height - padding * 2)));
-        }
-
-        String pkg = removeJavaExtension(name);
-        packageColors.computeIfAbsent(pkg, k -> new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-        //packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
-    }
-
-//    private void ensureNode(String name, boolean isMainFile) {
-//        if (!nodePositions.containsKey(name)) {
-//            nodePositions.put(name, new Point(
-//                    padding + rand.nextInt(screenSize.width - padding * 2),
-//                    padding + rand.nextInt(screenSize.height - padding * 2)
-//            ));
-//        }
-//
-//        String pkg = removeJavaExtension(name);
-//        packageColors.computeIfAbsent(pkg, k -> {
-//            if (isMainFile) {
-//                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)); // random per i file principali
-//            } else {
-//                return Color.GRAY; // fisso grigio per le dipendenze
-//            }
-//        });
-//    }
 
     private void ensureNode(String name, boolean isSrcFile) {
         if (!nodePositions.containsKey(name)) {

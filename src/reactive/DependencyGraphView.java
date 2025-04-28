@@ -3,13 +3,12 @@ package reactive;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
-import reactive.reports.FileDependencies;
+import reactive.reports.SingleDependencyResult;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.nio.file.Path;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -125,13 +124,8 @@ public class DependencyGraphView extends JFrame {
     public void startProjectAnalysis() {
         ReactiveDependencyAnalyser.analyzeProject(selectedPath)
                 .observeOn(Schedulers.computation())
-                .doOnNext(pkg -> SwingUtilities.invokeLater(() -> {
-                    packageCount.incrementAndGet();
-                    packageCountLabel.setText(" Packages: " + packageCount.get());
-                }))
-                .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
-                .concatMap(file -> Observable.just(file).delay(100, TimeUnit.MILLISECONDS))
-                .subscribe(file -> SwingUtilities.invokeLater(() -> updatePanel(file)),
+                .concatMap(dep -> Observable.just(dep).delay(10, TimeUnit.MILLISECONDS))
+                .subscribe(dep -> SwingUtilities.invokeLater(() -> updatePanel(dep)),
                         ex -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex)),
                         () -> SwingUtilities.invokeLater(() -> {
                             //legendPanel.updateLegend();
@@ -139,14 +133,14 @@ public class DependencyGraphView extends JFrame {
                         }));
     }
 
-    public void updatePanel(FileDependencies file) {
-        String fileName = selectedPath.relativize(file.filePath).toString();
-        graphPanel.addFileWithDependencies(fileName, file.dependencies);
+    public void updatePanel(SingleDependencyResult dep) {
+        String fileName = selectedPath.relativize(dep.filePath).toString();
+        graphPanel.addDependency(dep);
         legendPanel.updateLegend();
-
         fileCount.incrementAndGet();
-        dependencyCount.addAndGet(file.dependencies.size());
+        dependencyCount.incrementAndGet();
         fileCountLabel.setText(" Classes/Interfaces: " + fileCount.get());
         depCountLabel.setText(" Dependencies: " + dependencyCount.get());
+        packageCountLabel.setText(" Packages: " + ReactiveDependencyAnalyser.packageCount.get());
     }
 }
