@@ -32,7 +32,9 @@ public class DependencyGraphView extends JFrame {
 
     private final DependencyGraphPanel graphPanel = new DependencyGraphPanel();
     LegendPanel legendPanel = new LegendPanel(graphPanel.getPackageColors());
-    private final PublishSubject<ActionEvent> clickStream = PublishSubject.create();
+
+    private final PublishSubject<ActionEvent> startAnalysisClicks = PublishSubject.create();
+    private final PublishSubject<ActionEvent> selectFolderClicks = PublishSubject.create();
 
     public DependencyGraphView() {
         setTitle("Dependency Analyzer");
@@ -58,8 +60,12 @@ public class DependencyGraphView extends JFrame {
         splitPane.setDividerLocation(800);
         add(splitPane, BorderLayout.CENTER);
 
-        selectFolderButton.addActionListener(this::onSelectFolder);
-        startButton.addActionListener(this::onStartAnalysis);
+        //selectFolderButton.addActionListener(this::onSelectFolder);
+        //startButton.addActionListener(this::onStartAnalysis);
+
+        selectFolderButton.addActionListener(selectFolderClicks::onNext);
+        startButton.addActionListener(startAnalysisClicks::onNext);
+        setupReactiveButtons();
     }
 
     private void onSelectFolder(ActionEvent e) {
@@ -80,6 +86,32 @@ public class DependencyGraphView extends JFrame {
         depCountLabel.setText("Dependencies: 0");
     }
 
+    private void setupReactiveButtons() {
+        startAnalysisClicks
+                .observeOn(Schedulers.computation())
+                .subscribe(e -> {
+                    if (selectedPath == null) {
+                        SwingUtilities.invokeLater(() ->
+                                JOptionPane.showMessageDialog(this, "Please select a source root folder first."));
+                        return;
+                    }
+                    graphPanel.reset();
+                    resetCounters();
+                    startProjectAnalysis();
+                });
+
+        selectFolderClicks
+                .observeOn(Schedulers.computation())
+                .subscribe(e -> {
+                    JFileChooser chooser = new JFileChooser();
+                    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                    if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                        selectedPath = chooser.getSelectedFile().toPath();
+                        selectedFolderLabel.setText("Selected: " + selectedPath);
+                    }
+                });
+    }
+
     private void onStartAnalysis(ActionEvent e) {
         if (selectedPath == null) {
             JOptionPane.showMessageDialog(this, "Please select a source root folder first.");
@@ -95,7 +127,8 @@ public class DependencyGraphView extends JFrame {
                 .observeOn(Schedulers.computation())
                 .doOnNext(pkg -> SwingUtilities.invokeLater(() -> {
                     packageCount.incrementAndGet();
-                    packageCountLabel.setText(" Packages: " + packageCount.get());}))
+                    packageCountLabel.setText(" Packages: " + packageCount.get());
+                }))
                 .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
                 .concatMap(file -> Observable.just(file).delay(100, TimeUnit.MILLISECONDS))
                 .subscribe(file -> SwingUtilities.invokeLater(() -> updatePanel(file)),
@@ -107,7 +140,7 @@ public class DependencyGraphView extends JFrame {
     }
 
     public void updatePanel(FileDependencies file) {
-        String fileName = file.filePath.toString();
+        String fileName = selectedPath.relativize(file.filePath).toString();
         graphPanel.addFileWithDependencies(fileName, file.dependencies);
         legendPanel.updateLegend();
 

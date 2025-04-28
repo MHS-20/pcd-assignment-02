@@ -55,7 +55,6 @@ public class DependencyGraphPanel extends JPanel {
         if (fileName != null && fileName.endsWith(".java")) {
             fileName = fileName.substring(0, fileName.length() - 5);
         }
-
         return fileName
                 .replace("/", ".")
                 .replace("\\", ".");

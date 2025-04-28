@@ -76,12 +76,11 @@ public class ReactiveDependencyAnalyser {
             try (FileInputStream in = new FileInputStream(filePath.toFile())) {
                 JavaParser jp = new JavaParser();
                 CompilationUnit cu = jp.parse(in).getResult().get();
-                //CompilationUnit cu = StaticJavaParser.parse(in);
                 Set<String> dependencies = new HashSet<>();
 
-                cu.findAll(ClassOrInterfaceType.class).forEach(importDecl -> {
-                    String name = importDecl.getNameAsString();
-                    System.out.println("Parsed dependency: " + name);
+                cu.findAll(ClassOrInterfaceType.class).forEach(decl -> {
+                    String name = decl.getNameAsString();
+                    //System.out.println("Parsed dependency: " + name);
                     dependencies.add(name);
                 });
 
