@@ -31,14 +31,24 @@ public class DependencyGraphPanel extends JPanel {
         repaint();
     }
 
+//    public void addFileWithDependencies(String file, List<SingleDependencyResult> deps) {
+//        ensureNode(file);
+//        for (SingleDependencyResult dep : deps) {
+//            ensureNode(dep.dependency);
+//            edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep.dependency);
+//        }
+//        repaint();
+//    }
+
     public void addFileWithDependencies(String file, List<SingleDependencyResult> deps) {
-        ensureNode(file);
+        ensureNode(file, true);
         for (SingleDependencyResult dep : deps) {
-            ensureNode(dep.dependency);
+            ensureNode(dep.dependency, false);
             edges.computeIfAbsent(file, k -> new HashSet<>()).add(dep.dependency);
         }
         repaint();
     }
+
 
     private void ensureNode(String name) {
         if (!nodePositions.containsKey(name)) {
@@ -50,6 +60,25 @@ public class DependencyGraphPanel extends JPanel {
         packageColors.computeIfAbsent(pkg, k -> new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         //packageColors.computeIfAbsent(pkg, k -> predefinedColors[colorIndex++ % predefinedColors.length]);
     }
+
+    private void ensureNode(String name, boolean isMainFile) {
+        if (!nodePositions.containsKey(name)) {
+            nodePositions.put(name, new Point(
+                    padding + rand.nextInt(screenSize.width - padding * 2),
+                    padding + rand.nextInt(screenSize.height - padding * 2)
+            ));
+        }
+
+        String pkg = removeJavaExtension(name);
+        packageColors.computeIfAbsent(pkg, k -> {
+            if (isMainFile) {
+                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)); // random per i file principali
+            } else {
+                return Color.GRAY; // fisso grigio per le dipendenze
+            }
+        });
+    }
+
 
     public String removeJavaExtension(String fileName) {
         if (fileName != null && fileName.endsWith(".java")) {
@@ -98,7 +127,7 @@ public class DependencyGraphPanel extends JPanel {
 
             g2d.setColor(color);
             //g2d.setColor(Color.BLUE);
-            g2d.fillOval(p.x - 20, p.y - 20, 25, 25);
+            g2d.fillOval(p.x - 20, p.y - 20, 20, 20);
             g2d.setColor(Color.BLACK);
             g2d.drawString(name, p.x - 20, p.y - 25);
         }
