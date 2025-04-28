@@ -1,5 +1,6 @@
 package reactive;
 
+import com.github.javaparser.JavaParser;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
@@ -73,11 +74,14 @@ public class ReactiveDependencyAnalyser {
     public static Observable<SingleDependencyResult> extractDependencies(Path filePath) {
         return Observable.<SingleDependencyResult>create(emitter -> {
             try (FileInputStream in = new FileInputStream(filePath.toFile())) {
-                CompilationUnit cu = StaticJavaParser.parse(in);
+                JavaParser jp = new JavaParser();
+                CompilationUnit cu = jp.parse(in).getResult().get();
+                //CompilationUnit cu = StaticJavaParser.parse(in);
                 Set<String> dependencies = new HashSet<>();
 
-                cu.findAll(ImportDeclaration.class).forEach(importDecl -> {
+                cu.findAll(ClassOrInterfaceType.class).forEach(importDecl -> {
                     String name = importDecl.getNameAsString();
+                    System.out.println("Parsed dependency: " + name);
                     dependencies.add(name);
                 });
 

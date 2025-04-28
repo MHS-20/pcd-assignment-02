@@ -3,6 +3,7 @@ package reactive;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
+import reactive.reports.FileDependencies;
 
 import javax.swing.*;
 import java.awt.*;
@@ -84,32 +85,35 @@ public class DependencyGraphView extends JFrame {
             JOptionPane.showMessageDialog(this, "Please select a source root folder first.");
             return;
         }
-
-        //ReactiveDependencyAnalyser.resetCounters();
         graphPanel.reset();
         resetCounters();
+        startProjectAnalysis();
+    }
 
+    public void startProjectAnalysis() {
         ReactiveDependencyAnalyser.analyzeProject(selectedPath)
                 .observeOn(Schedulers.computation())
                 .doOnNext(pkg -> SwingUtilities.invokeLater(() -> {
                     packageCount.incrementAndGet();
-                    packageCountLabel.setText(" Packages: " + packageCount.get());
-                }))
+                    packageCountLabel.setText(" Packages: " + packageCount.get());}))
                 .flatMap(pkg -> Observable.fromIterable(pkg.fileDependencies))
                 .concatMap(file -> Observable.just(file).delay(100, TimeUnit.MILLISECONDS))
-                .subscribe(file -> SwingUtilities.invokeLater(() -> {
-                            String fileName = file.filePath.toString();
-                            graphPanel.addFileWithDependencies(fileName, file.dependencies);
-                            fileCount.incrementAndGet();
-                            dependencyCount.addAndGet(file.dependencies.size());
-
-                            legendPanel.updateLegend();
-                            fileCountLabel.setText(" Classes/Interfaces: " + fileCount.get());
-                            depCountLabel.setText(" Dependencies: " + dependencyCount.get());
-                        }), ex -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex)),
+                .subscribe(file -> SwingUtilities.invokeLater(() -> updatePanel(file)),
+                        ex -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex)),
                         () -> SwingUtilities.invokeLater(() -> {
                             //legendPanel.updateLegend();
                             JOptionPane.showMessageDialog(this, "Analysis complete.");
                         }));
+    }
+
+    public void updatePanel(FileDependencies file) {
+        String fileName = file.filePath.toString();
+        graphPanel.addFileWithDependencies(fileName, file.dependencies);
+        legendPanel.updateLegend();
+
+        fileCount.incrementAndGet();
+        dependencyCount.addAndGet(file.dependencies.size());
+        fileCountLabel.setText(" Classes/Interfaces: " + fileCount.get());
+        depCountLabel.setText(" Dependencies: " + dependencyCount.get());
     }
 }
