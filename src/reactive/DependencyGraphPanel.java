@@ -46,15 +46,22 @@ public class DependencyGraphPanel extends JPanel {
             ));
         }
 
-        String pkg = removeJavaExtension(name);
-        packageColors.computeIfAbsent(pkg, k -> {
-            if (isSrcFile) {
-                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256));
-            } else {
-                int grayValue = 80 + rand.nextInt(120); // sfumature tra 80 e 200
-                return new Color(grayValue, grayValue, grayValue);
-            }
-        });
+        name = removeJavaExtension(name);
+        if (isSrcFile) {
+            packageColors.put(name, new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
+        } else {
+            int grayValue = 80 + rand.nextInt(120);
+            packageColors.putIfAbsent(name, new Color(grayValue, grayValue, grayValue));
+        }
+
+//        packageColors.computeIfAbsent(pkg, k -> {
+//            if (isSrcFile) {
+//                return new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256));
+//            } else {
+//                int grayValue = 80 + rand.nextInt(120); // sfumature tra 80 e 200
+//                return new Color(grayValue, grayValue, grayValue);
+//            }
+//        });
     }
 
 

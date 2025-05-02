@@ -25,7 +25,7 @@ public class ReactiveDependencyAnalyser {
     public static Observable<SingleDependencyResult> analyzeFile(Path filePath, String packageName) {
         fileCount.incrementAndGet();
         return extractDependencies(filePath)
-                .doOnNext(dep -> dep.setFileName(filePath.toString()))
+                .doOnNext(dep -> dep.setFileName(filePath.getFileName().toString()))
                 .doOnNext(dep -> dep.setPackageName(packageName))
                 .subscribeOn(Schedulers.io());
     }
