@@ -53,7 +53,7 @@ public class PackageAnalyserVerticle extends AbstractVerticle {
             futures.add(classPromise.future().onSuccess(report ->
                     classDeps.put(report.getClassName(), report.getUsedTypes())));
         }
-        //return Future.succeededFuture(futures); // don't wait for completion here
+        //return Future.succeededFuture(futures);
         return waitAll(futures);
     }
     

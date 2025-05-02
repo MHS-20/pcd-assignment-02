@@ -22,12 +22,17 @@ public class ReactiveDependencyAnalyser {
     public static AtomicInteger packageCount = new AtomicInteger(0);
     public static AtomicInteger dependencyCount = new AtomicInteger(0);
 
-    public static Observable<SingleDependencyResult> analyzeFile(Path filePath, String packageName) {
-        fileCount.incrementAndGet();
-        return extractDependencies(filePath)
-                .doOnNext(dep -> dep.setFileName(filePath.getFileName().toString()))
-                .doOnNext(dep -> dep.setPackageName(packageName))
-                .subscribeOn(Schedulers.io());
+    public static Observable<SingleDependencyResult> analyzeProject(Path rootProjectPath) {
+        try (Stream<Path> packages = Files.walk(rootProjectPath)) {
+            List<Path> packageDirs = packages
+                    .filter(Files::isDirectory)
+                    .collect(Collectors.toList());
+            return Observable.fromIterable(packageDirs)
+                    .flatMap(ReactiveDependencyAnalyser::analyzePackage)
+                    .subscribeOn(Schedulers.io());
+        } catch (IOException e) {
+            return Observable.error(e);
+        }
     }
 
     public static Observable<SingleDependencyResult> analyzePackage(Path packagePath) {
@@ -43,17 +48,12 @@ public class ReactiveDependencyAnalyser {
         }
     }
 
-    public static Observable<SingleDependencyResult> analyzeProject(Path rootProjectPath) {
-        try (Stream<Path> packages = Files.walk(rootProjectPath)) {
-            List<Path> packageDirs = packages
-                    .filter(Files::isDirectory)
-                    .collect(Collectors.toList());
-            return Observable.fromIterable(packageDirs)
-                    .flatMap(ReactiveDependencyAnalyser::analyzePackage)
-                    .subscribeOn(Schedulers.io());
-        } catch (IOException e) {
-            return Observable.error(e);
-        }
+    public static Observable<SingleDependencyResult> analyzeFile(Path filePath, String packageName) {
+        fileCount.incrementAndGet();
+        return extractDependencies(filePath)
+                .doOnNext(dep -> dep.setFileName(filePath.getFileName().toString()))
+                .doOnNext(dep -> dep.setPackageName(packageName))
+                .subscribeOn(Schedulers.io());
     }
 
     public static Observable<SingleDependencyResult> extractDependencies(Path filePath) {
