@@ -1,33 +1,28 @@
-package reactive;
+package reactive.panels;
+
+import java.awt.*;
+import java.util.Collections;
+import java.util.Map;
 
 import reactive.reports.SingleDependencyResult;
 
 import javax.swing.*;
-import java.awt.*;
 import java.util.*;
-import java.util.List;
 
-public class DependencyGraphPanel extends JPanel {
+public class RandomDependencyGraphPanel extends JPanel implements DependencyGraphPanel {
 
     private final Map<String, Point> nodePositions = new HashMap<>();
     private final Map<String, Set<String>> edges = new HashMap<>();
     private final Map<String, Color> packageColors = new HashMap<>();
     private final Random rand = new Random(42);
 
-    private int colorIndex = 0;
-    private final Color[] predefinedColors = {
-            Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA,
-            Color.CYAN, Color.PINK, Color.YELLOW, Color.GRAY, Color.DARK_GRAY
-    };
-
-    int padding = 150;
+    int padding = 5;
     Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
     public void reset() {
         nodePositions.clear();
         edges.clear();
         packageColors.clear();
-        colorIndex = 0;
         repaint();
     }
 
@@ -36,6 +31,10 @@ public class DependencyGraphPanel extends JPanel {
         ensureNode(dependency.dependency, false);
         edges.computeIfAbsent(dependency.fileName, k -> new HashSet<>()).add(dependency.dependency);
         repaint();
+    }
+
+    public Map<String, Color> getPackageColors() {
+        return Collections.unmodifiableMap(packageColors);
     }
 
     private void ensureNode(String name, boolean isSrcFile) {
@@ -55,7 +54,6 @@ public class DependencyGraphPanel extends JPanel {
         }
     }
 
-
     public String removeJavaExtension(String fileName) {
         if (fileName != null && fileName.endsWith(".java")) {
             fileName = fileName.substring(0, fileName.length() - 5);
@@ -65,20 +63,10 @@ public class DependencyGraphPanel extends JPanel {
                 .replace("\\", ".");
     }
 
-    private String extractPackage(String fileName) {
-        System.out.println("Extracting package from: " + fileName);
-        return fileName.contains(".")
-                ? fileName.substring(0, fileName.lastIndexOf('.'))
-                : "default";
-    }
-
-    public Map<String, Color> getPackageColors() {
-        return Collections.unmodifiableMap(packageColors);
-    }
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        this.setPreferredSize(screenSize);
         setBackground(Color.LIGHT_GRAY);
         Graphics2D g2d = (Graphics2D) g;
 
@@ -108,4 +96,3 @@ public class DependencyGraphPanel extends JPanel {
         }
     }
 }
-

@@ -1,4 +1,4 @@
-package reactive;
+package reactive.panels;
 
 import javax.swing.*;
 import java.awt.*;

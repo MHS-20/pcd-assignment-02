@@ -3,6 +3,8 @@ package reactive;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
+import reactive.panels.LegendPanel;
+import reactive.panels.DependencyGraphPanel;
 import reactive.reports.SingleDependencyResult;
 
 import javax.swing.*;
@@ -16,7 +18,6 @@ public class DependencyGraphView extends JFrame {
 
     private static final Path DEFAULT_PATH = Path.of("src/");
     private Path selectedPath = DEFAULT_PATH;
-    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
     public static AtomicInteger fileCount = new AtomicInteger(0);
     public static AtomicInteger packageCount = new AtomicInteger(0);
@@ -29,19 +30,20 @@ public class DependencyGraphView extends JFrame {
     private final JLabel packageCountLabel = new JLabel("Packages: 0");
     private final JLabel depCountLabel = new JLabel("Dependencies: 0");
 
-    private final DependencyGraphPanel graphPanel = new DependencyGraphPanel();
-    LegendPanel legendPanel = new LegendPanel(graphPanel.getPackageColors());
+    private final DependencyGraphPanel graphPanel;
+    private LegendPanel legendPanel;
 
     private final PublishSubject<ActionEvent> startAnalysisClicks = PublishSubject.create();
     private final PublishSubject<ActionEvent> selectFolderClicks = PublishSubject.create();
 
-    public DependencyGraphView() {
+    public DependencyGraphView(DependencyGraphPanel graphPanel) {
+        this.graphPanel = graphPanel;
+        this.legendPanel = new LegendPanel(graphPanel.getPackageColors());
+
         setTitle("Dependency Analyzer");
         setSize(1200, 800);
-        //setSize(screenSize.width, screenSize.height);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        graphPanel.setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(selectFolderButton);
@@ -55,7 +57,7 @@ public class DependencyGraphView extends JFrame {
         statusPanel.add(depCountLabel);
         add(statusPanel, BorderLayout.SOUTH);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(graphPanel), new JScrollPane(legendPanel));
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane((Component) graphPanel), new JScrollPane(legendPanel));
         splitPane.setDividerLocation(800);
         add(splitPane, BorderLayout.CENTER);
 
@@ -74,6 +76,16 @@ public class DependencyGraphView extends JFrame {
             selectedPath = chooser.getSelectedFile().toPath();
             selectedFolderLabel.setText("Selected: " + selectedPath);
         }
+    }
+
+    private void onStartAnalysis(ActionEvent e) {
+        if (selectedPath == null) {
+            JOptionPane.showMessageDialog(this, "Please select a source root folder first.");
+            return;
+        }
+        graphPanel.reset();
+        resetCounters();
+        startProjectAnalysis();
     }
 
     private void resetCounters() {
@@ -111,20 +123,11 @@ public class DependencyGraphView extends JFrame {
                 });
     }
 
-    private void onStartAnalysis(ActionEvent e) {
-        if (selectedPath == null) {
-            JOptionPane.showMessageDialog(this, "Please select a source root folder first.");
-            return;
-        }
-        graphPanel.reset();
-        resetCounters();
-        startProjectAnalysis();
-    }
 
     public void startProjectAnalysis() {
         ReactiveDependencyAnalyser.analyzeProject(selectedPath)
                 .observeOn(Schedulers.computation())
-                .concatMap(dep -> Observable.just(dep).delay(10, TimeUnit.MILLISECONDS))
+                .concatMap(dep -> Observable.just(dep).delay(25, TimeUnit.MILLISECONDS))
                 .subscribe(dep -> SwingUtilities.invokeLater(() -> updatePanel(dep)),
                         ex -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error: " + ex)),
                         () -> SwingUtilities.invokeLater(() -> {
