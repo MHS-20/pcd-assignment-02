@@ -13,7 +13,7 @@ public class RandomDependencyGraphPanel extends JPanel implements DependencyGrap
 
     private final Map<String, Point> nodePositions = new HashMap<>();
     private final Map<String, Set<String>> edges = new HashMap<>();
-    private final Map<String, Color> packageColors = new HashMap<>();
+    private final Map<String, Color> fileColors = new HashMap<>();
     private final Random rand = new Random(42);
 
     int padding = 5;
@@ -22,7 +22,7 @@ public class RandomDependencyGraphPanel extends JPanel implements DependencyGrap
     public void reset() {
         nodePositions.clear();
         edges.clear();
-        packageColors.clear();
+        fileColors.clear();
         repaint();
     }
 
@@ -33,8 +33,8 @@ public class RandomDependencyGraphPanel extends JPanel implements DependencyGrap
         repaint();
     }
 
-    public Map<String, Color> getPackageColors() {
-        return Collections.unmodifiableMap(packageColors);
+    public Map<String, Color> getFileColors() {
+        return Collections.unmodifiableMap(fileColors);
     }
 
     private void ensureNode(String name, boolean isSrcFile) {
@@ -47,10 +47,10 @@ public class RandomDependencyGraphPanel extends JPanel implements DependencyGrap
 
         name = removeJavaExtension(name);
         if (isSrcFile) {
-            packageColors.put(name, new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
+            fileColors.put(name, new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         } else {
             int grayValue = 80 + rand.nextInt(120);
-            packageColors.putIfAbsent(name, new Color(grayValue, grayValue, grayValue));
+            fileColors.putIfAbsent(name, new Color(grayValue, grayValue, grayValue));
         }
     }
 
@@ -86,7 +86,7 @@ public class RandomDependencyGraphPanel extends JPanel implements DependencyGrap
             Point p = entry.getValue();
 
             String pkg = removeJavaExtension(name);
-            Color color = packageColors.getOrDefault(pkg, Color.BLUE);
+            Color color = fileColors.getOrDefault(pkg, Color.BLUE);
 
             g2d.setColor(color);
             //g2d.setColor(Color.BLUE);

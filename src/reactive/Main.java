@@ -1,5 +1,6 @@
 package reactive;
 
+import reactive.panels.HierarchicalDependencyGraphPanel;
 import reactive.panels.PolygonDependencyGraphPanel;
 import reactive.panels.RandomDependencyGraphPanel;
 
@@ -11,9 +12,10 @@ public class Main {
     public static void main(String[] args) {
         // test();
 
-        RandomDependencyGraphPanel randomDependencyGraphPanel = new RandomDependencyGraphPanel();
-        PolygonDependencyGraphPanel polygonDependencyGraphPanel = new PolygonDependencyGraphPanel();
-        SwingUtilities.invokeLater(() -> new DependencyGraphView(polygonDependencyGraphPanel).setVisible(true));
+        var randomGraphPanel = new RandomDependencyGraphPanel();
+        var polygonGraphPanel = new PolygonDependencyGraphPanel();
+        var hierarchicalGraphPanel = new HierarchicalDependencyGraphPanel();
+        SwingUtilities.invokeLater(() -> new DependencyGraphView(polygonGraphPanel).setVisible(true));
     }
 
     public static void test() {

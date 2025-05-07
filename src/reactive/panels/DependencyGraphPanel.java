@@ -8,5 +8,5 @@ import java.util.Map;
 public interface DependencyGraphPanel {
     void reset();
     void addDependency(SingleDependencyResult dependency);
-    Map<String, Color> getPackageColors();
+    Map<String, Color> getFileColors();
 }

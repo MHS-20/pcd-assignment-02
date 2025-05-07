@@ -38,7 +38,7 @@ public class DependencyGraphView extends JFrame {
 
     public DependencyGraphView(DependencyGraphPanel graphPanel) {
         this.graphPanel = graphPanel;
-        this.legendPanel = new LegendPanel(graphPanel.getPackageColors());
+        this.legendPanel = new LegendPanel(graphPanel.getFileColors());
 
         setTitle("Dependency Analyzer");
         setSize(1200, 800);
